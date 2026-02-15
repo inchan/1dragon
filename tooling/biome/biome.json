@@ -1,0 +1,55 @@
+{
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"organizeImports": {
+		"enabled": true
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"indentWidth": 2,
+		"lineWidth": 100
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"semicolons": "asNeeded"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"complexity": {
+				"noExcessiveCognitiveComplexity": "warn"
+			},
+			"style": {
+				"useNamingConvention": {
+					"level": "warn",
+					"options": {
+						"conventions": [
+							{
+								"selector": { "kind": "typeAlias" },
+								"formats": ["PascalCase"]
+							},
+							{
+								"selector": { "kind": "interface" },
+								"formats": ["PascalCase"]
+							},
+							{
+								"selector": { "kind": "enum" },
+								"formats": ["PascalCase"]
+							},
+							{
+								"selector": { "kind": "enumMember" },
+								"formats": ["CONSTANT_CASE"]
+							}
+						]
+					}
+				}
+			}
+		}
+	},
+	"files": {
+		"ignore": ["node_modules", "dist", ".turbo", "coverage"]
+	}
+}

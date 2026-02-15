@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9.15.0'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Typecheck
+        run: pnpm typecheck
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Lint
+        run: pnpm lint
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Test
+        run: pnpm test
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Build
+        run: pnpm build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Install Playwright Browsers (PR only)
+        if: github.event_name == 'pull_request'
+        run: pnpm --filter @snapvid/web exec playwright install --with-deps
+
+      - name: E2E Tests (PR only)
+        if: github.event_name == 'pull_request'
+        run: pnpm --filter @snapvid/web run e2e
+
+      - name: Upload Playwright Report (PR only)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 30

@@ -1,0 +1,12 @@
+{
+	"extends": "@snapvid/typescript-config/react.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"],
+			"@snapvid/ui": ["../../packages/ui/src/index.ts"],
+			"@snapvid/shared": ["../../packages/shared/src/index.ts"]
+		}
+	},
+	"include": ["src/**/*", "e2e/**/*"]
+}

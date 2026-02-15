@@ -1,0 +1,8 @@
+{
+	"extends": "@snapvid/typescript-config/react.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"outDir": "./dist"
+	},
+	"include": ["src"]
+}

@@ -1,0 +1,958 @@
+import { and, desc, eq } from 'drizzle-orm'
+import { createHash, randomUUID } from 'node:crypto'
+import { Hono } from 'hono'
+import { z } from 'zod'
+import { ErrorCode } from '@snapvid/shared'
+import { createVideoJobRequestSchema } from '@snapvid/shared'
+import { requireAuth } from '@/infrastructure/auth/hono-handler.js'
+import { logger } from '@/infrastructure/logging/index.js'
+import { sseBroker } from '@/infrastructure/notification/sse-broker.js'
+import { db } from '@/infrastructure/persistence/db.js'
+import { jobEvents, videoJobs } from '@/infrastructure/persistence/schema.js'
+import {
+	QueueName,
+	addJob,
+	type MediaGenerateJobData,
+} from '@/infrastructure/queue/bullmq.config.js'
+import { VideoJobRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
+import { MetaGraphAdapter, TikTokBusinessAdapter } from '@/infrastructure/providers/social/index.js'
+import { config } from '@/shared/config.js'
+
+const MAX_RETRY_COUNT = 2
+const CREATE_JOB_DEFAULT_DURATION = 15
+const JOB_POLL_RETRY_INTERVAL_MS = 5_000
+
+type NotificationEventPayload = {
+	readonly id?: string
+	readonly jobId: string
+	readonly previousStatus: string
+	readonly newStatus: string
+	readonly timestamp: string
+	readonly metadata?: Record<string, unknown>
+	readonly errorMessage?: string | null
+	readonly retryCount?: number
+}
+
+type LegacyStreamEvent = {
+	type: 'JOB_STATUS_CHANGED'
+	payload: NotificationEventPayload
+}
+
+type JobStatusEvent = {
+	eventType: 'JOB_STATUS_CHANGED'
+	payload: {
+		jobId: string
+		newStatus: string
+		progress: number
+		errorMessage?: string | null
+		retryCount?: number
+		canRetry?: boolean
+		timestamp: string
+		metadata?: Record<string, unknown>
+	}
+	createdAt: string
+}
+
+type JobDetailResponse = {
+	jobId: string
+	status: string
+	progress: number
+	retryCount: number
+	errorMessage: string | null
+	canRetry: boolean
+	createdAt: string
+	updatedAt: string
+	startedAt: string | null
+	completedAt: string | null
+}
+
+const createJobRequestSchema = createVideoJobRequestSchema.extend({
+	stage: z.string().trim().optional(),
+	token: z.string().trim().optional(),
+})
+
+const UNAUTHORIZED_RESPONSE = {
+	success: false,
+	error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+} as const
+
+function mapFieldErrors(
+	errors: ReadonlyArray<{ path: ReadonlyArray<string | number>; message: string }>,
+) {
+	return errors.map((error) => ({
+		field: error.path.join('.'),
+		message: error.message,
+	}))
+}
+
+function jobCanRetry(status: string, retryCount: number): boolean {
+	return (status === 'FAILED' || status === 'DEGRADED_FAILED') && retryCount < MAX_RETRY_COUNT
+}
+
+function toIso(date: Date | null | undefined): string | null {
+	return date ? date.toISOString() : null
+}
+
+function buildDeterministicJobId(userId: string, key: string, imageUrl: string): string {
+	const hash = createHash('sha256')
+		.update(`${userId}:${imageUrl}:${key}`)
+		.digest('hex')
+	return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(
+		20,
+		32,
+	)}`
+}
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+	return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : null
+}
+
+function toJobStatusEvent(
+	payloadCandidate: Record<string, unknown> | null,
+	fallback: {
+		jobId: string
+		retryCount: number
+		errorMessage: string | null
+		progress: number
+		timestamp: string
+	},
+): JobStatusEvent | null {
+	if (!payloadCandidate) {
+		return null
+	}
+
+	const previousStatus =
+		typeof payloadCandidate.previousStatus === 'string' ? payloadCandidate.previousStatus : 'QUEUED'
+	const newStatus =
+		typeof payloadCandidate.newStatus === 'string' ? payloadCandidate.newStatus : 'QUEUED'
+	const jobId = typeof payloadCandidate.jobId === 'string' ? payloadCandidate.jobId : fallback.jobId
+
+	const metadataCandidate = toRecord(payloadCandidate.metadata)
+	const progressValue =
+		typeof metadataCandidate?.progress === 'number'
+			? metadataCandidate.progress
+			: typeof payloadCandidate.progress === 'number'
+				? payloadCandidate.progress
+				: undefined
+
+	const progress = typeof progressValue === 'number' ? Math.max(0, Math.min(100, progressValue)) : fallback.progress
+	const retryCount =
+		typeof payloadCandidate.retryCount === 'number' ? Math.max(0, Math.round(payloadCandidate.retryCount)) : fallback.retryCount
+	const timestamp =
+		typeof payloadCandidate.timestamp === 'string'
+			? payloadCandidate.timestamp
+			: fallback.timestamp
+	const errorMessage =
+		payloadCandidate.errorMessage === null
+			? null
+			: typeof payloadCandidate.errorMessage === 'string'
+				? payloadCandidate.errorMessage
+				: fallback.errorMessage
+
+	return {
+		eventType: 'JOB_STATUS_CHANGED',
+		payload: {
+			jobId,
+			newStatus,
+			progress,
+			errorMessage,
+			retryCount,
+			canRetry: jobCanRetry(newStatus, retryCount),
+			timestamp,
+			metadata: metadataCandidate ?? {},
+		},
+		createdAt: timestamp,
+	}
+}
+
+function normalizeStreamPayload(rawData: string): JobStatusEvent | null {
+	let parsed: unknown = null
+	try {
+		parsed = JSON.parse(rawData)
+	} catch {
+		return null
+	}
+
+	const root = toRecord(parsed)
+	if (!root) {
+		return null
+	}
+
+	let payload: Record<string, unknown> | null = null
+
+	if (root.type === 'JOB_STATUS_CHANGED') {
+		payload = toRecord(root.payload)
+		if (!payload) {
+			return null
+		}
+
+		return toJobStatusEvent(payload, {
+			jobId: 'unknown',
+			retryCount: 0,
+			errorMessage: null,
+			progress: 0,
+			timestamp: new Date().toISOString(),
+		})
+	}
+
+	if (root.eventType === 'JOB_STATUS_CHANGED') {
+		payload = toRecord(root.payload) ?? root
+	}
+
+	if (!payload) {
+		return null
+	}
+
+	if (typeof payload.jobId !== 'string' || typeof payload.newStatus !== 'string' || typeof payload.timestamp !== 'string') {
+		return null
+	}
+
+	if (typeof payload.previousStatus !== 'string') {
+		return null
+	}
+
+	return toJobStatusEvent(payload, {
+		jobId: payload.jobId,
+		retryCount: 0,
+		errorMessage: null,
+		progress: 0,
+		timestamp: payload.timestamp,
+	})
+}
+
+function toJobStatusEventFromDbPayload(
+	rawPayload: Record<string, unknown> | null,
+	job: { id: string; status: string; progress: number; retryCount: number | null; errorMessage: string | null },
+): JobStatusEvent {
+	const payload = rawPayload ?? {}
+	const event = toJobStatusEvent(payload, {
+		jobId: job.id,
+		retryCount: job.retryCount ?? 0,
+		errorMessage: job.errorMessage,
+		progress: job.progress,
+		timestamp: new Date().toISOString(),
+	})
+
+	if (event) {
+		return event
+	}
+
+	return {
+		eventType: 'JOB_STATUS_CHANGED',
+		payload: {
+			jobId: job.id,
+			newStatus: job.status,
+			progress: job.progress,
+			errorMessage: job.errorMessage,
+			retryCount: job.retryCount ?? 0,
+			canRetry: jobCanRetry(job.status, job.retryCount ?? 0),
+			timestamp: new Date().toISOString(),
+		},
+		createdAt: new Date().toISOString(),
+	}
+}
+
+function extractJobIdFromStreamMessage(rawData: string): string | null {
+	const parsed = normalizeStreamPayload(rawData)
+	return parsed?.payload.jobId ?? null
+}
+
+function toJobStatusResponse(
+	row: {
+		id: string
+		status: string
+		progress: number
+		retryCount: number | null
+		errorMessage: string | null
+		createdAt: Date
+		updatedAt: Date
+		startedAt: Date | null
+		completedAt: Date | null
+	},
+): JobDetailResponse {
+	const retryCount = row.retryCount ?? 0
+	return {
+		jobId: row.id,
+		status: row.status,
+		progress: row.progress,
+		retryCount,
+		errorMessage: row.errorMessage,
+		canRetry: jobCanRetry(row.status, retryCount),
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+		startedAt: toIso(row.startedAt),
+		completedAt: toIso(row.completedAt),
+	}
+}
+
+function toJobStreamResponse(
+	row: {
+		id: string
+		status: string
+		progress: number
+		retryCount: number | null
+		errorMessage: string | null
+	},
+): JobStatusEvent {
+	return {
+		eventType: 'JOB_STATUS_CHANGED',
+		payload: {
+			jobId: row.id,
+			newStatus: row.status,
+			progress: row.progress,
+			errorMessage: row.errorMessage,
+			retryCount: row.retryCount ?? 0,
+			canRetry: jobCanRetry(row.status, row.retryCount ?? 0),
+			timestamp: new Date().toISOString(),
+		},
+		createdAt: new Date().toISOString(),
+	}
+}
+
+async function appendJobStatusEvent(input: {
+	jobId: string
+	userId: string
+	previousStatus: string
+	newStatus: string
+	metadata?: Record<string, unknown>
+	retryCount?: number
+	errorMessage?: string | null
+}): Promise<void> {
+	await db.insert(jobEvents).values({
+		jobId: input.jobId,
+		eventType: 'JOB_STATUS_CHANGED',
+		payload: {
+			id: randomUUID(),
+			jobId: input.jobId,
+			userId: input.userId,
+			previousStatus: input.previousStatus,
+			newStatus: input.newStatus,
+			timestamp: new Date().toISOString(),
+			metadata: input.metadata ?? {},
+			errorMessage: input.errorMessage,
+			retryCount: input.retryCount ?? 0,
+		},
+	})
+}
+
+function createJobEventStream(userId: string, jobId: string | null, lastEventId: string | null): ReadableStream<Uint8Array> {
+	const encoder = new TextEncoder()
+	let heartbeat: NodeJS.Timeout | null = null
+	let clientId: string | null = null
+
+	return new ReadableStream<Uint8Array>({
+		start: (controller) => {
+			const send = (chunk: string): void => {
+				controller.enqueue(encoder.encode(chunk))
+			}
+			const close = (): void => {
+				if (heartbeat) {
+					clearInterval(heartbeat)
+					heartbeat = null
+				}
+				try {
+					controller.close()
+				} catch {
+					// ignore
+				}
+			}
+
+			clientId = sseBroker.connect(userId, send, close)
+
+			const replayed = sseBroker.replay(userId, lastEventId)
+			for (const message of replayed) {
+				if (jobId && extractJobIdFromStreamMessage(message) !== jobId) {
+					continue
+				}
+				send(message)
+			}
+
+			heartbeat = setInterval(() => {
+				send(sseBroker.createHeartbeatEvent())
+				sseBroker.sweepExpiredConnections()
+			}, sseBroker.getHeartbeatIntervalMs())
+		},
+		cancel: () => {
+			if (heartbeat) {
+				clearInterval(heartbeat)
+				heartbeat = null
+			}
+			if (clientId) {
+				sseBroker.disconnect(clientId)
+			}
+		},
+	})
+}
+
+export function createMediaRouter(): Hono {
+	const app = new Hono()
+	const tiktokAdapter = new TikTokBusinessAdapter({
+		...(config.TIKTOK_CLIENT_KEY ? { clientKey: config.TIKTOK_CLIENT_KEY } : {}),
+		...(config.TIKTOK_CLIENT_SECRET ? { clientSecret: config.TIKTOK_CLIENT_SECRET } : {}),
+	})
+	const metaAdapter = new MetaGraphAdapter({
+		...(config.META_APP_ID ? { appId: config.META_APP_ID } : {}),
+		...(config.META_APP_SECRET ? { appSecret: config.META_APP_SECRET } : {}),
+	})
+	const tiktokConnections = new Map<string, string>()
+	const instagramConnections = new Map<string, string>()
+	const jobRepository = new VideoJobRepositoryImpl()
+
+	app.use('*', requireAuth)
+
+	const sharePayloadSchema = z.object({
+		variantUrl: z.string().url(),
+		caption: z.string().min(1),
+		hashtags: z.array(z.string()).default([]),
+	})
+
+	const connectPayloadSchema = z.object({
+		code: z.string().min(1),
+	})
+
+	const shareWithRetry = async (
+		uploadFn: () => Promise<unknown>,
+		context: {
+			platform: string
+			userId: string
+		},
+	): Promise<
+		| {
+				success: true
+				attempts: number
+				output: { remoteId: string; shareUrl: string }
+		  }
+		| { success: false; attempts: number }
+	> => {
+		for (let attempts = 1; attempts <= 2; attempts += 1) {
+			try {
+				const output = await uploadFn()
+				return {
+					success: true,
+					attempts,
+					output: output as { remoteId: string; shareUrl: string },
+				}
+			} catch (error) {
+				logger.warn({ platform: context.platform, attempts, userId: context.userId, error }, 'Media share upload attempt failed')
+				if (attempts === 2) {
+					return { success: false, attempts }
+				}
+			}
+		}
+
+		return { success: false, attempts: 2 }
+	}
+
+	const parseJsonBody = async (
+		c: { req: { json: () => Promise<unknown> } },
+		userId: string,
+		route: string,
+	): Promise<unknown | null> => {
+		try {
+			return await c.req.json()
+		} catch (error) {
+			logger.warn({ userId, route, error }, 'Failed to parse JSON body')
+			return null
+		}
+	}
+
+	app.get('/jobs/stream', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const lastEventId = c.req.header('Last-Event-ID') ?? null
+		const stream = createJobEventStream(user.id, null, lastEventId)
+		return new Response(stream, {
+			status: 200,
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				Connection: 'keep-alive',
+				'X-Accel-Buffering': 'no',
+			},
+		})
+	})
+
+	app.get('/jobs/:jobId/stream', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const jobId = c.req.param('jobId')
+		const job = await jobRepository.findById(jobId, user.id)
+		if (!job) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'JOB_NOT_FOUND',
+						message: 'Job not found',
+					},
+				},
+				404,
+			)
+		}
+
+		const lastEventId = c.req.header('Last-Event-ID') ?? null
+		const stream = createJobEventStream(user.id, job.id, lastEventId)
+		return new Response(stream, {
+			status: 200,
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				Connection: 'keep-alive',
+				'X-Accel-Buffering': 'no',
+			},
+		})
+	})
+
+	app.post('/jobs', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const body = await parseJsonBody(c, user.id, 'POST /api/v1/media/jobs')
+		const parsed = createJobRequestSchema.safeParse(body)
+		if (!parsed.success) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: ErrorCode.VALIDATION,
+						message: 'Validation failed',
+						details: { fieldErrors: mapFieldErrors(parsed.error.errors) },
+					},
+				},
+				400,
+			)
+		}
+
+		const idempotencyKey =
+			c.req.header('Idempotency-Key')?.trim() ??
+			(parsed.data.idempotencyKey?.trim() ? parsed.data.idempotencyKey : undefined)
+
+		const jobId = idempotencyKey
+			? buildDeterministicJobId(user.id, idempotencyKey, parsed.data.imageUrl)
+			: randomUUID()
+
+		let existing = await jobRepository.findById(jobId, user.id)
+		if (existing) {
+			return c.json(
+				{
+					success: true,
+					data: {
+						...toJobStatusResponse(existing),
+						isDuplicate: true,
+					},
+				},
+				200,
+			)
+		}
+
+		let created:
+			| Awaited<ReturnType<(typeof jobRepository)['create']>>
+			| null = null
+		try {
+			created = await jobRepository.create({
+				id: jobId,
+				userId: user.id,
+				inputImageUrl: parsed.data.imageUrl,
+				status: 'QUEUED',
+			})
+		} catch (error) {
+			existing = await jobRepository.findById(jobId, user.id)
+			if (existing) {
+				return c.json(
+					{
+						success: true,
+						data: {
+							...toJobStatusResponse(existing),
+							isDuplicate: true,
+						},
+					},
+					200,
+				)
+			}
+			throw error
+		}
+
+		const queuePayload: MediaGenerateJobData = {
+			projectId: created.id,
+			userId: user.id,
+			imageUrl: parsed.data.imageUrl,
+			...(idempotencyKey != null ? { idempotencyKey } : {}),
+			retryAttempt: 0,
+			options: {
+				duration: parsed.data.duration ?? CREATE_JOB_DEFAULT_DURATION,
+				stylePreset: parsed.data.stylePreset,
+			},
+		}
+
+		try {
+			await addJob(QueueName.MEDIA_GENERATE, queuePayload, { jobId: created.id })
+			await jobRepository.updateStatus({ jobId: created.id, status: 'QUEUED', progress: 0 })
+			await appendJobStatusEvent({
+				jobId: created.id,
+				userId: user.id,
+				previousStatus: created.status,
+				newStatus: 'QUEUED',
+				metadata: {
+					source: 'queue',
+					idempotencyKey,
+					retryAttempt: 0,
+				},
+				retryCount: created.retryCount ?? 0,
+			})
+		} catch (error) {
+			await jobRepository.updateStatus({
+				jobId: created.id,
+				status: 'FAILED',
+				errorMessage: error instanceof Error ? error.message : '큐 등록 실패',
+				progress: 100,
+			})
+			await appendJobStatusEvent({
+				jobId: created.id,
+				userId: user.id,
+				previousStatus: 'QUEUED',
+				newStatus: 'FAILED',
+				metadata: {
+					source: 'enqueue',
+					reason: error instanceof Error ? error.message : 'enqueue_failed',
+				},
+				errorMessage: error instanceof Error ? error.message : 'enqueue_failed',
+			}).catch(() => {
+				// best effort
+			})
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'PROVIDER_ERROR',
+						message: 'Failed to enqueue generation job',
+					},
+				},
+				503,
+			)
+		}
+
+		return c.json(
+			{
+				success: true,
+				data: toJobStatusResponse(created),
+			},
+			201,
+		)
+	})
+
+	app.get('/jobs/:jobId', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const jobId = c.req.param('jobId')
+		const job = await jobRepository.findById(jobId, user.id)
+		if (!job) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'JOB_NOT_FOUND',
+						message: 'Job not found',
+					},
+				},
+				404,
+			)
+		}
+
+		const rows = await db
+			.select()
+			.from(jobEvents)
+			.where(and(eq(jobEvents.jobId, job.id), eq(jobEvents.eventType, 'JOB_STATUS_CHANGED')))
+			.orderBy(desc(jobEvents.createdAt))
+			.limit(20)
+
+		const events = rows.map<JobStatusEvent>((row) => {
+			const payload = toRecord(row.payload)
+			const event = toJobStatusEventFromDbPayload(payload, {
+				id: job.id,
+				status: job.status,
+				progress: job.progress,
+				retryCount: job.retryCount,
+				errorMessage: job.errorMessage,
+			})
+			return {
+				...event,
+				createdAt: typeof row.createdAt === 'string' ? row.createdAt : new Date(row.createdAt).toISOString(),
+				payload: {
+					...event.payload,
+					canRetry: jobCanRetry(event.payload.newStatus, event.payload.retryCount ?? 0),
+				},
+			}
+		})
+
+		return c.json({
+			success: true,
+			data: {
+				job: toJobStatusResponse(job),
+				events,
+			},
+		})
+	})
+
+	app.get('/shares/tiktok/connect-url', (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const state = `${user.id}:${Date.now()}`
+		return c.json({
+			success: true,
+			data: {
+				url: tiktokAdapter.getAuthorizationUrl({
+					redirectUri: 'https://snapvid.ai/oauth/tiktok/callback',
+					state,
+				}),
+			},
+		})
+	})
+
+	app.get('/shares/instagram/connect-url', (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const state = `${user.id}:${Date.now()}`
+		return c.json({
+			success: true,
+			data: {
+				url: metaAdapter.getAuthorizationUrl({
+					redirectUri: 'https://snapvid.ai/oauth/instagram/callback',
+					state,
+				}),
+			},
+		})
+	})
+
+	app.post('/shares/tiktok/connect', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const body = await parseJsonBody(c, user.id, 'POST /api/v1/media/shares/tiktok/connect')
+		const parsed = connectPayloadSchema.safeParse(body)
+		if (!parsed.success) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: ErrorCode.VALIDATION,
+						message: 'Validation failed',
+						details: { fieldErrors: mapFieldErrors(parsed.error.errors) },
+					},
+				},
+				400,
+			)
+		}
+
+		const token = await tiktokAdapter.exchangeCodeForToken(parsed.data.code)
+		tiktokConnections.set(user.id, token.accessToken)
+
+		return c.json({
+			success: true,
+			data: {
+				platform: 'TIKTOK',
+				connected: true,
+				expiresInSec: token.expiresInSec,
+			},
+		})
+	})
+
+	app.post('/shares/instagram/connect', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const body = await parseJsonBody(c, user.id, 'POST /api/v1/media/shares/instagram/connect')
+		const parsed = connectPayloadSchema.safeParse(body)
+		if (!parsed.success) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: ErrorCode.VALIDATION,
+						message: 'Validation failed',
+						details: { fieldErrors: mapFieldErrors(parsed.error.errors) },
+					},
+				},
+				400,
+			)
+		}
+
+		const token = await metaAdapter.exchangeCodeForToken(parsed.data.code)
+		instagramConnections.set(user.id, token.accessToken)
+
+		return c.json({
+			success: true,
+			data: {
+				platform: 'INSTAGRAM',
+				connected: true,
+				expiresInSec: token.expiresInSec,
+			},
+		})
+	})
+
+	app.post('/shares/tiktok', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const body = await parseJsonBody(c, user.id, 'POST /api/v1/media/shares/tiktok')
+		const parsed = sharePayloadSchema.safeParse(body)
+		if (!parsed.success) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: ErrorCode.VALIDATION,
+						message: 'Validation failed',
+						details: { fieldErrors: mapFieldErrors(parsed.error.errors) },
+					},
+				},
+				400,
+			)
+		}
+
+		const token = tiktokConnections.get(user.id)
+		if (!token) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'ACCOUNT_NOT_CONNECTED',
+						message: 'TikTok account is not connected',
+					},
+				},
+				400,
+			)
+		}
+
+		const shared = await shareWithRetry(
+			() =>
+				tiktokAdapter.uploadVideo({
+					accessToken: token,
+					videoUrl: parsed.data.variantUrl,
+					caption: parsed.data.caption,
+					hashtags: parsed.data.hashtags,
+				}),
+			{ platform: 'TIKTOK', userId: user.id },
+		)
+
+		if (!shared.success) {
+			return c.json({
+				success: false,
+				error: {
+					code: 'SOCIAL_UPLOAD_FAILED',
+					message: '업로드에 실패했습니다. 다운로드 후 직접 업로드해주세요',
+				},
+				data: {
+					platform: 'TIKTOK',
+					fallbackDownloadUrl: parsed.data.variantUrl,
+				},
+			})
+		}
+
+		return c.json({
+			success: true,
+			data: {
+				platform: 'TIKTOK',
+				attempts: shared.attempts,
+				remoteId: shared.output.remoteId,
+				shareUrl: shared.output.shareUrl,
+			},
+		})
+	})
+
+	app.post('/shares/instagram', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const body = await parseJsonBody(c, user.id, 'POST /api/v1/media/shares/instagram')
+		const parsed = sharePayloadSchema.safeParse(body)
+		if (!parsed.success) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: ErrorCode.VALIDATION,
+						message: 'Validation failed',
+						details: { fieldErrors: mapFieldErrors(parsed.error.errors) },
+					},
+				},
+				400,
+			)
+		}
+
+		const token = instagramConnections.get(user.id)
+		if (!token) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'ACCOUNT_NOT_CONNECTED',
+						message: 'Instagram account is not connected',
+					},
+				},
+				400,
+			)
+		}
+
+		const shared = await shareWithRetry(
+			() =>
+				metaAdapter.uploadVideo({
+					accessToken: token,
+					videoUrl: parsed.data.variantUrl,
+					caption: parsed.data.caption,
+					hashtags: parsed.data.hashtags,
+				}),
+			{ platform: 'INSTAGRAM', userId: user.id },
+		)
+
+		if (!shared.success) {
+			return c.json({
+				success: false,
+				error: {
+					code: 'SOCIAL_UPLOAD_FAILED',
+					message: '업로드에 실패했습니다. 다운로드 후 직접 업로드해주세요',
+				},
+				data: {
+					platform: 'INSTAGRAM',
+					fallbackDownloadUrl: parsed.data.variantUrl,
+				},
+			})
+		}
+
+		return c.json({
+			success: true,
+			data: {
+				platform: 'INSTAGRAM',
+				attempts: shared.attempts,
+				remoteId: shared.output.remoteId,
+				shareUrl: shared.output.shareUrl,
+			},
+		})
+	})
+
+	return app
+}

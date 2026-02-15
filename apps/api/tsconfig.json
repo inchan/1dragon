@@ -1,0 +1,13 @@
+{
+	"extends": "@snapvid/typescript-config/node.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"noEmit": true
+	},
+	"include": ["src"]
+}

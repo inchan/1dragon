@@ -1,0 +1,76 @@
+{
+	"common": {
+		"loading": "Loading...",
+		"error": "An error occurred",
+		"retry": "Retry",
+		"cancel": "Cancel",
+		"confirm": "Confirm",
+		"save": "Save",
+		"delete": "Delete",
+		"back": "Back",
+		"next": "Next",
+		"close": "Close"
+	},
+	"auth": {
+		"login": "Log in",
+		"logout": "Log out",
+		"signup": "Sign up",
+		"login_with_kakao": "Continue with Kakao",
+		"login_with_google": "Continue with Google",
+		"login_with_apple": "Continue with Apple",
+		"terms_agreement": "By logging in, you agree to SnapVid's Terms of Service and Privacy Policy."
+	},
+	"nav": {
+		"home": "Home",
+		"dashboard": "Dashboard",
+		"settings": "Settings",
+		"pricing": "Pricing"
+	},
+	"onboarding": {
+		"step1": {
+			"title": "Tell us about your business",
+			"description": "Enter your store or brand name.",
+			"businessNameLabel": "Business Name",
+			"businessNamePlaceholder": "e.g., SnapVid Store"
+		},
+		"step2": {
+			"title": "Select your selling platform",
+			"description": "Choose the main sales channel you use.",
+			"platformLabel": "Selling Platform",
+			"platformPlaceholder": "Select a platform"
+		},
+		"step3": {
+			"title": "Select your main product category",
+			"description": "Choose the category of products you mainly sell.",
+			"categoryLabel": "Product Category",
+			"categoryPlaceholder": "Select a category"
+		},
+		"skip": "Skip",
+		"complete": "Complete",
+		"error": "An error occurred while saving. Please try again.",
+		"errors": {
+			"businessNameRequired": "Please enter your business name.",
+			"businessNameTooLong": "Business name must be 255 characters or less.",
+			"platformRequired": "Please select a selling platform.",
+			"categoryRequired": "Please select a product category."
+		}
+	},
+	"profile": {
+		"title": "Profile Settings",
+		"description": "Manage your profile information.",
+		"nameLabel": "Name",
+		"namePlaceholder": "Enter your name",
+		"avatarUrlLabel": "Avatar URL",
+		"avatarUrlPlaceholder": "https://example.com/avatar.jpg",
+		"avatarAlt": "Profile image",
+		"emailLabel": "Email",
+		"emailReadOnly": "Email cannot be changed.",
+		"saveSuccess": "Saved successfully!",
+		"fetchError": "An error occurred while loading your profile.",
+		"updateError": "An error occurred while saving your profile.",
+		"errors": {
+			"nameTooLong": "Name must be 255 characters or less.",
+			"invalidUrl": "Please enter a valid URL."
+		}
+	}
+}

@@ -9,9 +9,22 @@ class MockEventSource {
 	public onmessage: ((event: MessageEvent<string>) => void) | null = null
 	public onerror: ((event: Event) => void) | null = null
 	public readonly close = vi.fn()
+	private readonly listeners = new Map<string, Array<(event: MessageEvent<string>) => void>>()
 
 	public constructor(public readonly url: string) {
 		MockEventSource.instances.push(this)
+	}
+
+	public addEventListener(type: string, listener: (event: MessageEvent<string>) => void): void {
+		const existing = this.listeners.get(type) ?? []
+		this.listeners.set(type, [...existing, listener])
+	}
+
+	public dispatchCustomEvent(type: string, event: MessageEvent<string>): void {
+		const handlers = this.listeners.get(type) ?? []
+		for (const handler of handlers) {
+			handler(event)
+		}
 	}
 }
 

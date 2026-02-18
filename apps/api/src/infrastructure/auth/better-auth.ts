@@ -3,6 +3,7 @@ import { betterAuth } from 'better-auth'
 import { config } from '../../shared/config.js'
 import { db } from '../persistence/db.js'
 import { logger } from '../logging/index.js'
+import * as authSchema from './schema.js'
 
 /**
  * Apple OAuth Client Secret 생성
@@ -71,6 +72,7 @@ function generateAppleClientSecret(): string {
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
 		provider: 'pg',
+		schema: authSchema,
 	}),
 	secret: config.DATABASE_URL,
 	baseUrl: process.env.API_URL ?? 'http://localhost:3000',
@@ -82,8 +84,15 @@ export const auth = betterAuth({
 		freshAge: 0,
 	},
 
-	// 리프레시 토큰 설정
+	// 이메일/비밀번호 인증 (core 옵션)
+	emailAndPassword: {
+		enabled: true,
+		requireEmailVerification: false,
+	},
+
+	// UUID 기반 ID 생성 (앱 스키마와 호환)
 	advanced: {
+		generateId: () => crypto.randomUUID(),
 		defaultCookieAttributes: {
 			sameSite: 'lax',
 			httpOnly: true,
@@ -134,19 +143,24 @@ export const auth = betterAuth({
 		user: {
 			create: {
 				after: async (user) => {
-					// 최초 로그인 시 Free 플랜 자동 할당
 					const { db } = await import('../persistence/db.js')
 					const { eq } = await import('drizzle-orm')
-					const { plans, subscriptions } = await import('../persistence/schema.js')
+					const { users, plans, subscriptions } = await import('../persistence/schema.js')
 
 					try {
-						// Free 플랜 조회
+						// Better Auth user → 앱 users 테이블 동기화
+						await db.insert(users).values({
+							id: user.id,
+							email: user.email,
+							name: user.name,
+						}).onConflictDoNothing()
+
+						// Free 플랜 조회 및 구독 생성
 						const freePlan = await db.query.plans.findFirst({
 							where: eq(plans.tier, 'FREE'),
 						})
 
 						if (freePlan) {
-							// Free 플랜 구독 생성
 							const now = new Date()
 							const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
@@ -165,9 +179,9 @@ export const auth = betterAuth({
 								error: error instanceof Error ? error.message : String(error),
 								userId: user.id,
 							},
-							'Failed to assign free plan',
+							'Failed to provision user resources',
 						)
-						// 플랜 할당 실패필도 로그인은 성공하도록
+						// 프로비저닝 실패해도 로그인은 성공하도록
 					}
 				},
 			},

@@ -6,8 +6,8 @@ import { auth } from './better-auth.js'
  * /auth/* 라우트에 마운트
  */
 export function setupAuthRoutes(app: Hono): void {
-	// Better Auth 핸들러 마운트
-	app.all('/auth/*', async (c: Context) => {
+	// Better Auth 핸들러 마운트 (basePath 기본값: /api/auth)
+	app.all('/api/auth/*', async (c: Context) => {
 		// Better Auth의 fetch 핸들러 호출
 		const request = c.req.raw
 

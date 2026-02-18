@@ -24,6 +24,16 @@ export const createVideoJobRequestSchema = z.object({
 	subtitleStyle: subtitleStyleSchema.optional(),
 	personaId: z.string().uuid().optional(),
 	duration: z.number().int().min(5).max(30).optional(),
+	productCategory: z.string().optional(),
+	moods: z.array(z.string()).optional(),
+	keywords: z.array(z.string()).optional(),
+	copy: z
+		.object({
+			hook: z.string(),
+			description: z.string(),
+			cta: z.string(),
+		})
+		.optional(),
 })
 
 export const retryVideoJobRequestSchema = z.object({
@@ -89,6 +99,7 @@ export const videoJobEventSchema = z.object({
 export const mediaJobStatusResponseSchema = z.object({
 	job: videoJobResponseSchema,
 	events: videoJobEventSchema.array().default([]),
+	variants: videoVariantResponseSchema.array().default([]),
 })
 
 // ── Type Exports ─────────────────────────────────────────────────────────────

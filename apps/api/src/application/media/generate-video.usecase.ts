@@ -12,6 +12,7 @@ import type { ComposerPort, PromptBuilderPort, RemoveBgPort } from '@/domain/med
 import { VariantPolicyService } from '@/domain/media/services.js'
 import { QualityScoreVO } from '@/domain/media/value-objects.js'
 import { QualityControlService } from './quality-control.js'
+import { RenderVariantsUseCase } from './render-variants.usecase.js'
 
 type I2VRouterPort = {
 	generateClip(input: {
@@ -152,6 +153,18 @@ export class GenerateVideoUseCase {
 		})
 
 		transition('RENDERING_VARIANTS')
+
+		const renderVariantsUseCase = new RenderVariantsUseCase(this.composer)
+		const rendered = await renderVariantsUseCase.execute({
+			jobId: input.jobId,
+			planTier: input.planTier,
+			masterVideoUrl: composed.masterVideoUrl,
+			durationSec: composed.durationSec,
+			width: composed.width,
+			height: composed.height,
+			includeWatermark: input.includeWatermark,
+		})
+
 		const quality = this.qualityControl.evaluate({
 			originalImageUrl: input.inputImageUrl,
 			generatedVideoUrl: composed.masterVideoUrl,
@@ -165,7 +178,7 @@ export class GenerateVideoUseCase {
 					width: composed.width,
 					height: composed.height,
 				}),
-				variants: [],
+				variants: rendered.variants,
 				qualityScore: new QualityScoreVO(quality.similarityScore),
 			}),
 		)

@@ -321,6 +321,10 @@ export const api = {
 			'imageUrl' | 'stylePreset' | 'platforms' | 'duration' | 'stage' | 'token' | 'narration' | 'subtitleStyle'
 		> & {
 			idempotencyKey?: string
+			productCategory?: string
+			moods?: string[]
+			keywords?: string[]
+			copy?: { hook: string; description: string; cta: string }
 		},
 	): Promise<CreateVideoJobResponse & { isDuplicate?: boolean }> =>
 		fetchApi<CreateVideoJobResponse & { isDuplicate?: boolean }>('/api/v1/media/jobs', {

@@ -57,7 +57,14 @@ const parseJobStreamMessage = (rawData: string): JobStreamMessage | null => {
 		}
 
 		const rawStatus = payloadCandidate.newStatus
-		const rawProgress = payloadCandidate.progress
+		// Check metadata.progress as fallback (for NotificationEvent format from SSE broker)
+		const metadataInPayload = toRecord(payloadCandidate.metadata)
+		const rawProgress =
+			typeof payloadCandidate.progress === 'number'
+				? payloadCandidate.progress
+				: typeof metadataInPayload?.progress === 'number'
+					? metadataInPayload.progress
+					: payloadCandidate.progress
 		if (typeof payloadCandidate.jobId !== 'string' || typeof rawStatus !== 'string') {
 			return null
 		}
@@ -247,6 +254,15 @@ export function useJobStream({ jobId, enabled = true, onUpdate }: UseJobStreamOp
 			}
 			handleMessage(message)
 		}
+
+		// SSE broker uses 'event: JOB_STATUS_CHANGED' which requires addEventListener
+		eventSource.addEventListener('JOB_STATUS_CHANGED', (event: MessageEvent<string>) => {
+			const message = parseJobStreamMessage(event.data)
+			if (!message) {
+				return
+			}
+			handleMessage(message)
+		})
 
 		eventSource.onerror = () => {
 			eventSource.close()

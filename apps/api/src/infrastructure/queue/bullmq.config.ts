@@ -8,13 +8,13 @@ export const redisConnection = new IORedis(config.REDIS_URL, {
 	enableReadyCheck: false,
 })
 
-// Queue names
+// Queue names (colons not allowed in BullMQ v5+)
 export const QueueName = {
-	MEDIA_ANALYZE: 'media:analyze',
-	MEDIA_GENERATE: 'media:generate',
-	MEDIA_COMPOSE: 'media:compose',
-	MEDIA_RENDER_VARIANT: 'media:render-variant',
-	NOTIFICATION_DISPATCH: 'notification:dispatch',
+	MEDIA_ANALYZE: 'media-analyze',
+	MEDIA_GENERATE: 'media-generate',
+	MEDIA_COMPOSE: 'media-compose',
+	MEDIA_RENDER_VARIANT: 'media-render-variant',
+	NOTIFICATION_DISPATCH: 'notification-dispatch',
 } as const
 
 export type QueueNameType = (typeof QueueName)[keyof typeof QueueName]
@@ -64,6 +64,14 @@ export interface MediaGenerateJobData {
 	imageUrl: string
 	retryAttempt?: number
 	idempotencyKey?: string
+	productCategory?: string
+	moods?: string[]
+	keywords?: string[]
+	copy?: {
+		hook: string
+		description: string
+		cta: string
+	}
 	options: {
 		duration: number
 		stylePreset?: string

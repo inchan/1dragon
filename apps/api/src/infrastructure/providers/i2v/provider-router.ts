@@ -23,8 +23,8 @@ type CircuitSnapshot = {
 	openedAt: number | null
 }
 
-const PAID_CHAIN: readonly I2VProviderName[] = ['RUNWAY', 'GEMINI_VEO', 'MINIMAX', 'HAILUO']
-const FREE_CHAIN: readonly I2VProviderName[] = ['HAILUO', 'MINIMAX', 'GEMINI_VEO']
+const PAID_CHAIN: readonly I2VProviderName[] = ['GEMINI_VEO', 'RUNWAY', 'MINIMAX', 'HAILUO']
+const FREE_CHAIN: readonly I2VProviderName[] = ['GEMINI_VEO', 'HAILUO', 'MINIMAX']
 
 export class AllI2VProvidersFailedError extends Error {
 	public readonly attemptedProviders: I2VProviderName[]

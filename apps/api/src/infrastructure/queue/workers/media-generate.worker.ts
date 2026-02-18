@@ -2,13 +2,16 @@ import { randomUUID } from 'node:crypto'
 import { PlanTier } from '@snapvid/shared'
 import { Worker, type Job } from 'bullmq'
 import { eq } from 'drizzle-orm'
+import { NotificationEvent } from '@/domain/notification/entities.js'
 import { db } from '@/infrastructure/persistence/db.js'
-import { jobEvents, videoJobs } from '@/infrastructure/persistence/schema.js'
+import { videoJobs } from '@/infrastructure/persistence/schema.js'
 import { GenerateVideoUseCase } from '@/application/media/generate-video.usecase.js'
 import { QualityControlService } from '@/application/media/quality-control.js'
 import { createChildLogger } from '@/infrastructure/logging/logger.js'
 import { FFmpegComposer } from '@/infrastructure/media/ffmpeg-composer.js'
 import { PromptBuilder } from '@/infrastructure/media/prompt-builder.js'
+import { sseBroker } from '@/infrastructure/notification/sse-broker.js'
+import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
 import { RemoveBgAdapter } from '@/infrastructure/providers/remove-bg/remove-bg.adapter.js'
 import {
 	GeminiVeoI2VAdapter,
@@ -22,7 +25,7 @@ import {
 	redisConnection,
 	type MediaGenerateJobData,
 } from '../bullmq.config.js'
-import { VideoJobRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
+import { VideoJobRepositoryImpl, VideoVariantRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
 import type { JobStatus } from '@/domain/media/value-objects.js'
 
 const logger = createChildLogger({ provider: QueueName.MEDIA_GENERATE })
@@ -39,6 +42,12 @@ const JOB_PROGRESS_BY_STATUS: Record<JobStatus, number> = {
 	DEGRADED_FAILED: 100,
 }
 
+const DEFAULT_COPY = {
+	hook: '상품을 돋보이게 보여주는 영상',
+	description: '핵심 장점을 강조하는 장면 구성',
+	cta: '지금 확인해 보세요',
+} as const
+
 function resolvePlanTier(duration: number): PlanTier {
 	return duration > 15 ? PlanTier.STARTER : PlanTier.FREE
 }
@@ -53,36 +62,6 @@ function buildRetryCount(value: number | undefined): number {
 
 function canRetryByPolicy(status: string, retryCount: number): boolean {
 	return (status === 'FAILED' || status === 'DEGRADED_FAILED') && retryCount < MAX_RETRY_COUNT
-}
-
-async function appendJobStatusEvent(input: {
-	jobId: string
-	userId: string
-	previousStatus: string
-	newStatus: string
-	metadata?: Record<string, unknown>
-	retryCount?: number
-	errorMessage?: string | null
-}): Promise<void> {
-	await db.insert(jobEvents).values({
-		jobId: input.jobId,
-		eventType: 'JOB_STATUS_CHANGED',
-		payload: {
-			id: randomUUID(),
-			jobId: input.jobId,
-			userId: input.userId,
-			previousStatus: input.previousStatus,
-			newStatus: input.newStatus,
-			timestamp: new Date().toISOString(),
-			errorMessage: input.errorMessage,
-			retryCount: input.retryCount,
-			metadata: {
-				...(input.metadata ?? {}),
-				progress: normalizeProgress(input.newStatus),
-				retryCount: input.retryCount,
-			},
-		},
-	})
 }
 
 async function persistJobTransition(
@@ -125,13 +104,35 @@ async function persistJobTransition(
 		userId: input.userId,
 		previousStatus: input.previousStatus,
 		newStatus: normalizedStatus,
-		...(input.errorMessage !== undefined ? { errorMessage: input.errorMessage } : {}),
-		...(retryCount !== undefined ? { retryCount } : {}),
 		metadata: {
 			...(input.metadata ?? {}),
 			reason: normalizedStatus === 'SUCCEEDED' ? 'pipeline_complete' : 'pipeline_progress',
+			progress,
+			...(retryCount !== undefined ? { retryCount } : {}),
+		},
+		...(input.errorMessage !== undefined ? { errorMessage: input.errorMessage } : {}),
+		...(retryCount !== undefined ? { retryCount } : {}),
+	})
+
+	// Publish SSE event for real-time client updates
+	const event = new NotificationEvent({
+		id: randomUUID(),
+		userId: input.userId,
+		payload: {
+			id: randomUUID(),
+			jobId: input.jobId,
+			userId: input.userId,
+			previousStatus: input.previousStatus,
+			newStatus: normalizedStatus,
+			timestamp: new Date().toISOString(),
+			metadata: {
+				...(input.metadata ?? {}),
+				progress,
+				...(retryCount !== undefined ? { retryCount } : {}),
+			},
 		},
 	})
+	sseBroker.publish(input.userId, 'JOB_STATUS_CHANGED', event)
 }
 
 export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): Promise<Record<string, unknown>> {
@@ -180,14 +181,10 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			isFirstVideo: false,
 			inputImageUrl: job.data.imageUrl,
 			stylePreset: job.data.options.stylePreset ?? 'SIMPLE',
-			productCategory: 'OTHER',
-			moods: ['PROFESSIONAL'],
-			keywords: [],
-			copy: {
-				hook: '상품을 돋보이게 보여주는 영상',
-				description: '핵심 장점을 강조하는 장면 구성',
-				cta: '지금 확인해 보세요',
-			},
+			productCategory: job.data.productCategory ?? 'OTHER',
+			moods: job.data.moods ?? ['PROFESSIONAL'],
+			keywords: job.data.keywords ?? [],
+			copy: job.data.copy ?? DEFAULT_COPY,
 			includeWatermark: planTier === PlanTier.FREE,
 			currentStatus,
 			currentRetryCount,
@@ -206,6 +203,21 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 				},
 				errorMessage: null,
 			})
+		}
+
+		if (generated.status === 'SUCCEEDED' && generated.job.result) {
+			const variantRepository = new VideoVariantRepositoryImpl()
+			for (const variant of generated.job.result.variants) {
+				await variantRepository.create({
+					jobId,
+					platform: variant.platform,
+					resolution: `${variant.asset.width}x${variant.asset.height}`,
+					duration: variant.asset.durationSec,
+					fileUrl: variant.asset.url,
+					thumbnailUrl: null,
+					hasWatermark: variant.hasWatermark,
+				})
+			}
 		}
 
 		await db

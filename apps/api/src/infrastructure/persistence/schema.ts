@@ -80,7 +80,7 @@ export const subtitleStyleEnum = pgEnum('subtitle_style', ['SIMPLE', 'BOLD', 'MO
 export const users = pgTable(
 	'users',
 	{
-		id: uuid('id').primaryKey().defaultRandom(),
+		id: text('id').primaryKey(),
 		email: varchar('email', { length: 255 }).notNull().unique(),
 		name: varchar('name', { length: 255 }),
 		avatarUrl: text('avatar_url'),
@@ -123,7 +123,7 @@ export const subscriptions = pgTable(
 	'subscriptions',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
+		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		planId: uuid('plan_id')
@@ -163,7 +163,7 @@ export const paymentTransactions = pgTable(
 	'payment_transactions',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
+		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		subscriptionId: uuid('subscription_id')
@@ -194,7 +194,7 @@ export const videoJobs = pgTable(
 	'video_jobs',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
+		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		status: jobStatusEnum('status').notNull().default('QUEUED'),
@@ -269,7 +269,7 @@ export const productAnalyses = pgTable(
 	'product_analyses',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
+		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		imageUrl: text('image_url').notNull(),
@@ -329,7 +329,7 @@ export const modelPersonaSelections = pgTable(
 	'model_persona_selections',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
+		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
 		jobId: uuid('job_id').references(() => videoJobs.id, { onDelete: 'set null' }),

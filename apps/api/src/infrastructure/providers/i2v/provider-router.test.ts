@@ -52,10 +52,11 @@ describe('ProviderRouter', () => {
 	})
 
 	it('fails over to next provider when primary fails', async () => {
-		const runway = vi.fn(async () => {
-			throw new I2VProviderError({ provider: 'RUNWAY', message: 'down', statusCode: 503 })
+		// PAID_CHAIN order: GEMINI_VEO → RUNWAY → MINIMAX → HAILUO
+		const veo = vi.fn(async () => {
+			throw new I2VProviderError({ provider: 'GEMINI_VEO', message: 'down', statusCode: 503 })
 		})
-		const veo = vi.fn(async () => buildSuccess('GEMINI_VEO'))
+		const runway = vi.fn(async () => buildSuccess('RUNWAY'))
 
 		const router = new ProviderRouter({
 			RUNWAY: new StubProvider('RUNWAY', runway),
@@ -74,9 +75,9 @@ describe('ProviderRouter', () => {
 			fps: 30,
 		})
 
-		expect(result.provider).toBe('GEMINI_VEO')
+		expect(result.provider).toBe('RUNWAY')
 		expect(router.getFailoverCount()).toBeGreaterThanOrEqual(1)
-		expect(veo).toHaveBeenCalledTimes(1)
+		expect(runway).toHaveBeenCalledTimes(1)
 	})
 
 	it('runs runway fail -> hailuo success integration path', async () => {
@@ -116,19 +117,20 @@ describe('ProviderRouter', () => {
 	})
 
 	it('opens circuit breaker after threshold failures and recovers to half-open', async () => {
+		// PAID_CHAIN order: GEMINI_VEO is primary — test circuit breaker on the primary
 		let failed = true
-		const runway = vi.fn(async () => {
+		const veo = vi.fn(async () => {
 			if (failed) {
-				throw new I2VProviderError({ provider: 'RUNWAY', message: 'down', statusCode: 503 })
+				throw new I2VProviderError({ provider: 'GEMINI_VEO', message: 'down', statusCode: 503 })
 			}
-			return buildSuccess('RUNWAY')
+			return buildSuccess('GEMINI_VEO')
 		})
 
 		const router = new ProviderRouter(
 			{
-				RUNWAY: new StubProvider('RUNWAY', runway),
+				RUNWAY: new StubProvider('RUNWAY', async () => buildSuccess('RUNWAY')),
 				HAILUO: new StubProvider('HAILUO', async () => buildSuccess('HAILUO')),
-				GEMINI_VEO: new StubProvider('GEMINI_VEO', async () => buildSuccess('GEMINI_VEO')),
+				GEMINI_VEO: new StubProvider('GEMINI_VEO', veo),
 				MINIMAX: new StubProvider('MINIMAX', async () => buildSuccess('MINIMAX')),
 			},
 			{ failureThreshold: 2, openDurationMs: 10 },
@@ -153,7 +155,7 @@ describe('ProviderRouter', () => {
 			fps: 30,
 		})
 
-		expect(router.getCircuitStates().RUNWAY).toBe('OPEN')
+		expect(router.getCircuitStates().GEMINI_VEO).toBe('OPEN')
 
 		await new Promise((resolve) => setTimeout(resolve, 15))
 		failed = false
@@ -168,8 +170,8 @@ describe('ProviderRouter', () => {
 			fps: 30,
 		})
 
-		expect(result.provider).toBe('RUNWAY')
-		expect(router.getCircuitStates().RUNWAY).toBe('CLOSED')
+		expect(result.provider).toBe('GEMINI_VEO')
+		expect(router.getCircuitStates().GEMINI_VEO).toBe('CLOSED')
 	})
 
 	it('throws all providers failed error when chain exhausted', async () => {

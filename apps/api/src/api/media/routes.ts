@@ -9,12 +9,13 @@ import { logger } from '@/infrastructure/logging/index.js'
 import { sseBroker } from '@/infrastructure/notification/sse-broker.js'
 import { db } from '@/infrastructure/persistence/db.js'
 import { jobEvents, videoJobs } from '@/infrastructure/persistence/schema.js'
+import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
 import {
 	QueueName,
 	addJob,
 	type MediaGenerateJobData,
 } from '@/infrastructure/queue/bullmq.config.js'
-import { VideoJobRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
+import { VideoJobRepositoryImpl, VideoVariantRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
 import { MetaGraphAdapter, TikTokBusinessAdapter } from '@/infrastructure/providers/social/index.js'
 import { config } from '@/shared/config.js'
 
@@ -64,6 +65,13 @@ type JobDetailResponse = {
 	updatedAt: string
 	startedAt: string | null
 	completedAt: string | null
+}
+
+function parseResolution(value: string): { width: number; height: number } {
+	const parts = value.split('x')
+	const width = Number(parts[0]) || 0
+	const height = Number(parts[1]) || 0
+	return { width, height }
 }
 
 const createJobRequestSchema = createVideoJobRequestSchema.extend({
@@ -309,32 +317,6 @@ function toJobStreamResponse(
 	}
 }
 
-async function appendJobStatusEvent(input: {
-	jobId: string
-	userId: string
-	previousStatus: string
-	newStatus: string
-	metadata?: Record<string, unknown>
-	retryCount?: number
-	errorMessage?: string | null
-}): Promise<void> {
-	await db.insert(jobEvents).values({
-		jobId: input.jobId,
-		eventType: 'JOB_STATUS_CHANGED',
-		payload: {
-			id: randomUUID(),
-			jobId: input.jobId,
-			userId: input.userId,
-			previousStatus: input.previousStatus,
-			newStatus: input.newStatus,
-			timestamp: new Date().toISOString(),
-			metadata: input.metadata ?? {},
-			errorMessage: input.errorMessage,
-			retryCount: input.retryCount ?? 0,
-		},
-	})
-}
-
 function createJobEventStream(userId: string, jobId: string | null, lastEventId: string | null): ReadableStream<Uint8Array> {
 	const encoder = new TextEncoder()
 	let heartbeat: NodeJS.Timeout | null = null
@@ -397,6 +379,7 @@ export function createMediaRouter(): Hono {
 	const tiktokConnections = new Map<string, string>()
 	const instagramConnections = new Map<string, string>()
 	const jobRepository = new VideoJobRepositoryImpl()
+	const variantRepository = new VideoVariantRepositoryImpl()
 
 	app.use('*', requireAuth)
 
@@ -586,6 +569,10 @@ export function createMediaRouter(): Hono {
 			imageUrl: parsed.data.imageUrl,
 			...(idempotencyKey != null ? { idempotencyKey } : {}),
 			retryAttempt: 0,
+			...(parsed.data.productCategory != null ? { productCategory: parsed.data.productCategory } : {}),
+			...(parsed.data.moods != null ? { moods: parsed.data.moods } : {}),
+			...(parsed.data.keywords != null ? { keywords: parsed.data.keywords } : {}),
+			...(parsed.data.copy != null ? { copy: parsed.data.copy } : {}),
 			options: {
 				duration: parsed.data.duration ?? CREATE_JOB_DEFAULT_DURATION,
 				stylePreset: parsed.data.stylePreset,
@@ -695,11 +682,25 @@ export function createMediaRouter(): Hono {
 			}
 		})
 
+		const variantRows = await variantRepository.findByJobId(job.id)
+		const variants = variantRows.map((record) => ({
+			id: record.id,
+			jobId: record.jobId,
+			platform: record.platform,
+			videoUrl: record.fileUrl ?? '',
+			thumbnailUrl: record.thumbnailUrl ?? '',
+			duration: record.duration,
+			resolution: parseResolution(record.resolution),
+			fileSize: record.fileSize ?? 0,
+			hasWatermark: record.hasWatermark,
+		}))
+
 		return c.json({
 			success: true,
 			data: {
 				job: toJobStatusResponse(job),
 				events,
+				variants,
 			},
 		})
 	})

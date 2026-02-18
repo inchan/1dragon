@@ -11,7 +11,7 @@ import {
 	Select,
 } from '@snapvid/ui'
 import { ProductCategory, type ProductCategory as ProductCategoryType } from '@snapvid/shared'
-import { useEffect, useMemo, useState, type JSX } from 'react'
+import { useCallback, useEffect, useMemo, useState, type JSX } from 'react'
 import {
 	CopySelection,
 	NarrationSettings,
@@ -71,24 +71,6 @@ function mapPlatformForApi(
 	return platform === 'instagram_reels' ? 'INSTAGRAM_REELS' : 'TIKTOK'
 }
 
-const INITIAL_VARIANTS: ReadonlyArray<VideoVariantItem> = [
-	{
-		platform: 'tiktok',
-		videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-		thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg',
-	},
-	{
-		platform: 'youtube_shorts',
-		videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-		thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg',
-	},
-	{
-		platform: 'instagram_reels',
-		videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-		thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg',
-	},
-]
-
 const DEFAULT_PERSONA_SELECTION: ModelPersonaSelection = {
 	gender: 'FEMALE',
 	ageRange: 'YOUNG_ADULT',
@@ -135,7 +117,7 @@ export function VideoCreatorWizard(): JSX.Element {
 	const [compositeImageUrl, setCompositeImageUrl] = useState<string | null>(null)
 	const [isCompositeLoading, setIsCompositeLoading] = useState(false)
 
-	const [variants, setVariants] = useState<VideoVariantItem[]>([...INITIAL_VARIANTS])
+	const [variants, setVariants] = useState<VideoVariantItem[]>([])
 	const [selectedPlatform, setSelectedPlatform] = useState<VideoPlatform>('tiktok')
 	const [overlayPlatform, setOverlayPlatform] = useState<VideoPlatform>('tiktok')
 	const [showSafeZone, setShowSafeZone] = useState(true)
@@ -144,10 +126,21 @@ export function VideoCreatorWizard(): JSX.Element {
 	const [candidateVideoUrl, setCandidateVideoUrl] = useState<string | null>(null)
 	const [candidatePlatform, setCandidatePlatform] = useState<VideoPlatform | null>(null)
 
-	useJobStream({
-		jobId,
-		enabled: step === 'GENERATE' && Boolean(jobId),
-		onUpdate: (message) => {
+	async function fetchAndSetVariants(targetJobId: string): Promise<void> {
+		const response = await api.getVideoJob(targetJobId)
+		const fetched = response.variants ?? []
+		const mapped: VideoVariantItem[] = fetched.map((v) => ({
+			platform: v.platform.toLowerCase() as VideoPlatform,
+			videoUrl: v.videoUrl,
+			thumbnailUrl: v.thumbnailUrl,
+		}))
+		if (mapped.length > 0) {
+			setVariants(mapped)
+		}
+	}
+
+	const onJobStreamUpdate = useCallback(
+		(message: { type: 'JOB_STATUS_CHANGED' | 'message'; payload: { jobId: string; newStatus: string; progress: number; canRetry?: boolean; errorMessage?: string | null; timestamp: string; retryCount?: number; metadata?: Record<string, unknown> } }) => {
 			if (message.payload.jobId !== jobId) {
 				return
 			}
@@ -157,9 +150,18 @@ export function VideoCreatorWizard(): JSX.Element {
 			setGenerationError(message.payload.errorMessage ?? null)
 
 			if (message.payload.newStatus === 'SUCCEEDED') {
-				setStep('PREVIEW')
+				void fetchAndSetVariants(jobId).finally(() => {
+					setStep('PREVIEW')
+				})
 			}
 		},
+		[jobId],
+	)
+
+	useJobStream({
+		jobId,
+		enabled: step === 'GENERATE' && Boolean(jobId),
+		onUpdate: onJobStreamUpdate,
 	})
 
 	const quotaQuery = useQuery({
@@ -307,6 +309,14 @@ export function VideoCreatorWizard(): JSX.Element {
 				duration: CREATE_JOB_DEFAULT_DURATION,
 				narration: narrationEnabled,
 				subtitleStyle,
+				productCategory: category,
+				moods: [],
+				keywords: [],
+				copy: {
+					hook: editableCopy.hookCopy,
+					description: editableCopy.bodyCopy,
+					cta: editableCopy.ctaCopy,
+				},
 			})
 
 			setJobId(jobResult.jobId)
@@ -331,6 +341,7 @@ export function VideoCreatorWizard(): JSX.Element {
 			})
 
 			if (jobResult.status === 'SUCCEEDED') {
+				await fetchAndSetVariants(jobResult.jobId)
 				setStep('PREVIEW')
 			}
 		} catch (error) {

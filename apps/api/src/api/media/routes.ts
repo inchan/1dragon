@@ -983,9 +983,35 @@ export function createMediaRouter(): Hono {
 		})
 	})
 
+	function buildDefaultImagenPromptTemplate(persona: {
+		gender: string
+		ageRange: string
+		bodyType: string
+		style: string
+	}): string {
+		const genderDesc = persona.gender === 'FEMALE' ? 'woman' : persona.gender === 'MALE' ? 'man' : 'person'
+		const ageDesc =
+			persona.ageRange === 'YOUNG_ADULT'
+				? 'in their 20s'
+				: persona.ageRange === 'ADULT'
+					? 'in their 30s'
+					: persona.ageRange === 'MIDDLE_AGED'
+						? 'in their 40s'
+						: 'in their 50s'
+		const styleDesc = persona.style.toLowerCase()
+
+		return [
+			`A ${persona.bodyType.toLowerCase()} ${genderDesc} ${ageDesc} with ${styleDesc} style,`,
+			`wearing/holding {{product_name}},`,
+			`photorealistic portrait, natural lighting, 9:16 vertical format,`,
+			`product clearly visible and recognizable, professional quality,`,
+			`product: {{product_name}}, category: {{product_category}}, keywords: {{product_keywords}}`,
+		].join(' ')
+	}
+
 	const modelCompositeBodySchema = z.object({
 		productImageUrl: z.string().url(),
-		productName: z.string().min(1),
+		productName: z.string().optional(),
 		productCategory: productCategorySchema,
 		productKeywords: z.array(z.string()),
 		persona: z.object({
@@ -994,7 +1020,7 @@ export function createMediaRouter(): Hono {
 			ageRange: z.enum(['YOUNG_ADULT', 'ADULT', 'MIDDLE_AGED', 'SENIOR']),
 			bodyType: z.enum(['SLIM', 'REGULAR']),
 			style: z.enum(['CASUAL', 'FORMAL', 'STREET', 'MINIMAL']),
-			imagenPromptTemplate: z.string().min(1),
+			imagenPromptTemplate: z.string().optional(),
 		}),
 	})
 
@@ -1044,7 +1070,7 @@ export function createMediaRouter(): Hono {
 			const result = await useCase.execute({
 				userId: user.id,
 				productImageUrl: parsed.data.productImageUrl,
-				productName: parsed.data.productName,
+				...(parsed.data.productName ? { productName: parsed.data.productName } : {}),
 				productCategory: parsed.data.productCategory,
 				productKeywords: parsed.data.productKeywords,
 				preset: {
@@ -1054,7 +1080,9 @@ export function createMediaRouter(): Hono {
 					ageRange: parsed.data.persona.ageRange,
 					bodyType: parsed.data.persona.bodyType,
 					style: parsed.data.persona.style,
-					imagenPromptTemplate: parsed.data.persona.imagenPromptTemplate,
+					imagenPromptTemplate:
+					parsed.data.persona.imagenPromptTemplate?.trim() ||
+					buildDefaultImagenPromptTemplate(parsed.data.persona),
 					previewImageUrl: null,
 					isActive: true,
 					createdAt: new Date(),

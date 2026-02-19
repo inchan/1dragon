@@ -90,6 +90,8 @@ export function VideoCreatorWizard(): JSX.Element {
 	const [productName, setProductName] = useState('')
 	const [category, setCategory] = useState<ProductCategoryType>(ProductCategory.FASHION)
 	const [analyzed, setAnalyzed] = useState(false)
+	const [isAnalyzing, setIsAnalyzing] = useState(false)
+	const [analyzeError, setAnalyzeError] = useState<string | null>(null)
 	const [selectedStyle, setSelectedStyle] =
 		useState<'SIMPLE' | 'DYNAMIC' | 'EMOTIONAL' | 'TRENDY' | 'PREMIUM'>('TRENDY')
 	const [jobId, setJobId] = useState('')
@@ -211,20 +213,43 @@ export function VideoCreatorWizard(): JSX.Element {
 		setPreviewUrl(URL.createObjectURL(file))
 	}
 
-	function runAnalyze(): void {
-		setAnalyzed(true)
-		setStep(isModelEligibleCategory(category) ? 'MODEL' : 'STYLE')
+	async function runAnalyze(): Promise<void> {
+		if (!selectedFile) {
+			return
+		}
 
-		const variantsForProduct = createDefaultCopyVariants(productName.trim() || '상품')
-		const firstVariant = variantsForProduct[0]
-		setCopyVariants(variantsForProduct)
-		if (firstVariant) {
-			setSelectedCopyVariantId(firstVariant.id)
-			setEditableCopy({
-				hookCopy: firstVariant.hookCopy,
-				bodyCopy: firstVariant.bodyCopy,
-				ctaCopy: firstVariant.ctaCopy,
+		setIsAnalyzing(true)
+		setAnalyzeError(null)
+
+		try {
+			const analysis = await api.analyzeProduct({
+				image: selectedFile,
+				productName,
+				category,
 			})
+			setAnalysisResult(analysis)
+			setAnalyzed(true)
+
+			const detectedCategory = analysis.category ?? category
+			setCategory(detectedCategory as ProductCategoryType)
+
+			const variantsForProduct = createDefaultCopyVariants(productName.trim() || '상품')
+			const firstVariant = variantsForProduct[0]
+			setCopyVariants(variantsForProduct)
+			if (firstVariant) {
+				setSelectedCopyVariantId(firstVariant.id)
+				setEditableCopy({
+					hookCopy: firstVariant.hookCopy,
+					bodyCopy: firstVariant.bodyCopy,
+					ctaCopy: firstVariant.ctaCopy,
+				})
+			}
+
+			setStep(isModelEligibleCategory(detectedCategory as ProductCategoryType) ? 'MODEL' : 'STYLE')
+		} catch (error) {
+			setAnalyzeError(error instanceof Error ? error.message : '이미지 분석에 실패했습니다.')
+		} finally {
+			setIsAnalyzing(false)
 		}
 	}
 
@@ -313,13 +338,16 @@ export function VideoCreatorWizard(): JSX.Element {
 		setGenerationProgress(5)
 
 		try {
-			const analysis = await api.analyzeProduct({
+			// ANALYZE 단계에서 이미 분석된 결과 사용; 없으면 여기서 재분석
+			const analysis = analysisResult ?? (await api.analyzeProduct({
 				image: selectedFile,
 				productName,
 				category,
-			})
+			}))
 
-			setAnalysisResult(analysis)
+			if (!analysisResult) {
+				setAnalysisResult(analysis)
+			}
 
 			const effectiveImageUrl =
 				!skipModelPersona && compositeImageUrl ? compositeImageUrl : analysis.originalImageUrl
@@ -485,14 +513,17 @@ export function VideoCreatorWizard(): JSX.Element {
 					</CardHeader>
 					<CardContent className="space-y-3">
 						<p className="text-sm text-muted-foreground">
-							분석 결과가 준비되면 모델 선택 여부를 자동 결정합니다.
+							상품 이미지를 분석하고 모델 선택 여부를 자동 결정합니다.
 						</p>
+						{analyzeError && (
+							<p className="text-sm text-destructive">{analyzeError}</p>
+						)}
 						<div className="flex gap-2">
-							<Button type="button" variant="outline" onClick={() => setStep('UPLOAD')}>
+							<Button type="button" variant="outline" disabled={isAnalyzing} onClick={() => setStep('UPLOAD')}>
 								이전
 							</Button>
-							<Button type="button" onClick={runAnalyze}>
-								분석 완료로 진행
+							<Button type="button" disabled={isAnalyzing || !selectedFile} onClick={() => { void runAnalyze() }}>
+								{isAnalyzing ? '분석 중...' : '분석 시작'}
 							</Button>
 						</div>
 						{analyzed && <p className="text-sm">분석 완료: {category}</p>}

@@ -1,0 +1,7 @@
+cell_id,platform,hook_type,cta_type,thumbnail_variant,first_scene_variant,budget_krw,impression_target,pass_criteria,fail_action
+A1,TikTok,H1(문제제기),C1(혜택형),T1,F1,50000,1000,3초유지율>=35% and CTR>=1.2%,Hook 교체
+A2,TikTok,H2(결과선공개),C1(혜택형),T1,F2,50000,1000,3초유지율>=35% and CTR>=1.2%,썸네일 교체
+A3,TikTok,H3(상황몰입),C2(추천형),T2,F3,50000,1000,장바구니율>=2.0%,CTA 교체
+A4,Shorts,H1(문제제기),C2(추천형),T2,F1,50000,1000,3초유지율>=35% and CTR>=1.2%,Hook 교체
+A5,Reels,H2(결과선공개),C2(추천형),T3,F2,50000,1000,장바구니율>=2.0%,CTA 교체
+A6,Reels,H3(상황몰입),C1(혜택형),T3,F3,50000,1000,CTR>=1.2%,첫장면 교체

@@ -1,0 +1,6 @@
+scene_id,start_sec,end_sec,purpose,shot_description,asset_type,owner,notes
+S1,0.0,1.8,Hook,문제 제기 또는 결과 선공개,A-roll,PD,제품/문제 동시 노출
+S2,1.8,5.0,사용 시작,착용/착화 시작과 손·발 디테일,A-roll+B-roll,촬영팀,로고 변형 금지
+S3,5.0,9.0,행동 증명,걷기/턴/점프/앉기 동작,A-roll,촬영팀,물리 자연성 확인
+S4,9.0,12.8,전환 포인트,전후 비교 또는 기능 슬로모션,B-roll,에디터,핵심 USP 자막 삽입
+S5,12.8,15.0,CTA,혜택형 또는 추천형 CTA + 로고,Graphics,에디터,CTA 최소 2초 고정

@@ -142,8 +142,9 @@ export class ClaudeHaikuCopywriterAdapter {
 						return { provider: 'CLAUDE_HAIKU', variants }
 					}
 				}
-			} catch {
+			} catch (error) {
 				// API 실패 시 폴백 사용
+				console.error('[ClaudeHaikuCopywriter] API call failed, using fallback:', error)
 			}
 		}
 

@@ -1061,8 +1061,10 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
+		// Google AI Studio 키는 Veo와 Imagen 3 모두 지원 — GEMINI_IMAGEN_API_KEY 우선, 없으면 GEMINI_VEO_API_KEY 재사용
+		const imagenApiKey = process.env.GEMINI_IMAGEN_API_KEY ?? process.env.GEMINI_VEO_API_KEY
 		const compositeAdapter = new GeminiModelCompositeAdapter({
-			...(process.env.GEMINI_VEO_API_KEY ? { apiKey: process.env.GEMINI_VEO_API_KEY } : {}),
+			...(imagenApiKey ? { apiKey: imagenApiKey } : {}),
 		})
 		const useCase = new GenerateModelImageUseCase(compositeAdapter, stubSelectionRepository)
 

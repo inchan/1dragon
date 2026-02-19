@@ -290,12 +290,18 @@ export function VideoCreatorWizard(): JSX.Element {
 			return
 		}
 
+		// blob: URL은 서버에서 접근 불가 — S3 업로드 완료된 originalImageUrl만 사용
+		const sourceImageUrl = analysisResult?.originalImageUrl
+		if (!sourceImageUrl) {
+			return
+		}
+
 		setCompositeImageUrl(null)
 		setIsCompositeLoading(true)
 
 		try {
 			const result = await api.generateModelComposite({
-				productImageUrl: analysisResult?.originalImageUrl ?? previewUrl,
+				productImageUrl: sourceImageUrl,
 				...(productName.trim() ? { productName: productName.trim() } : {}),
 				productCategory: category,
 				productKeywords: analysisResult?.keywords ?? [],
@@ -315,8 +321,7 @@ export function VideoCreatorWizard(): JSX.Element {
 	}
 
 	async function startGeneration(): Promise<void> {
-		const forceNoCredits = productName.includes('#NO_CREDITS')
-		if (forceNoCredits || (quotaQuery.data?.canGenerate ?? true) === false) {
+		if ((quotaQuery.data?.canGenerate ?? true) === false) {
 			setShowUpgradeModal(true)
 			return
 		}
@@ -602,7 +607,7 @@ export function VideoCreatorWizard(): JSX.Element {
 						>
 							이전
 						</Button>
-						<Button type="button" onClick={startGeneration}>
+						<Button type="button" onClick={() => { void startGeneration() }}>
 							영상 생성 시작
 						</Button>
 					</div>
@@ -627,7 +632,7 @@ export function VideoCreatorWizard(): JSX.Element {
 						<p className="text-xs text-muted-foreground">진행률: {generationProgress}%</p>
 						{generationError && <p className="text-sm text-destructive">오류: {generationError}</p>}
 						{generationError && (
-							<Button type="button" variant="outline" onClick={startGeneration}>
+							<Button type="button" variant="outline" onClick={() => { void startGeneration() }}>
 								다시 생성 요청
 							</Button>
 						)}

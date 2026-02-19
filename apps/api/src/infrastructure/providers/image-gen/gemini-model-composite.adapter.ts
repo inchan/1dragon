@@ -56,6 +56,8 @@ function buildDeterministicImageUrl(input: {
 	return `${input.sourceImageUrl}${separator}persona=${input.presetId}&v=${digest}`
 }
 
+// 실제 이미지 품질 측정은 별도의 vision 모델 평가가 필요합니다.
+// 현재는 프롬프트 품질 지표(키워드 수, 프롬프트 길이, 재시도 횟수)를 이용한 휴리스틱 추정값을 사용합니다.
 function estimateQuality(input: {
 	readonly retryAttempt: number
 	readonly prompt: string

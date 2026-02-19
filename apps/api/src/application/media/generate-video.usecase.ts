@@ -14,12 +14,77 @@ import { QualityScoreVO } from '@/domain/media/value-objects.js'
 import { QualityControlService } from './quality-control.js'
 import { RenderVariantsUseCase } from './render-variants.usecase.js'
 
+type ClipPhase = 'INTRO' | 'DETAIL' | 'CTA'
+
+function resolveClipPhases(targetClipCount: number): ClipPhase[] {
+	if (targetClipCount <= 2) {
+		return ['INTRO', 'CTA']
+	}
+
+	return ['INTRO', 'DETAIL', 'CTA']
+}
+
+function buildClipPhaseDirective(phase: ClipPhase): string {
+	switch (phase) {
+		case 'INTRO':
+			return [
+				'Scene goal: strong opening reveal with confident product entrance.',
+				'Camera: medium-wide framing, smooth dolly-in, light parallax background motion.',
+				'Motion rule: move camera/background, keep product shape and print unchanged.',
+			].join(' ')
+		case 'DETAIL':
+			return [
+				'Scene goal: highlight material texture and functional details.',
+				'Camera: close-up sweep, macro-like detail pass, soft lighting transitions.',
+				'Motion rule: no geometric warping, keep seams/logo/text exactly readable.',
+			].join(' ')
+		case 'CTA':
+			return [
+				'Scene goal: clean closing hero shot for conversion.',
+				'Camera: recentre product, subtle push-in, premium finish lighting.',
+				'Motion rule: avoid aggressive distortion and keep brand-safe composition.',
+			].join(' ')
+	}
+}
+
+function buildProviderPromptBundle(
+	promptSet: {
+		runway: string
+		hailuo: string
+		geminiVeo: string
+		minimax: string
+	},
+	phaseDirective: string,
+): {
+	RUNWAY: string
+	HAILUO: string
+	GEMINI_VEO: string
+	MINIMAX: string
+} {
+	const sharedConstraints =
+		'Global constraints: preserve product identity, silhouette, logo and text exactly. no hallucinated accessories. no extra people unless present in source.'
+
+	return {
+		RUNWAY: `${promptSet.runway} ${phaseDirective} ${sharedConstraints}`,
+		HAILUO: `${promptSet.hailuo} ${phaseDirective} ${sharedConstraints}`,
+		GEMINI_VEO: `${promptSet.geminiVeo} ${phaseDirective} ${sharedConstraints}`,
+		MINIMAX: `${promptSet.minimax} ${phaseDirective} ${sharedConstraints}`,
+	}
+}
+
 type I2VRouterPort = {
 	generateClip(input: {
 		readonly planTier: PlanTierType
 		readonly isFirstVideo: boolean
 		readonly imageUrl: string
-		readonly prompt: string
+		readonly prompt:
+			| string
+			| {
+					readonly RUNWAY: string
+					readonly HAILUO: string
+					readonly GEMINI_VEO: string
+					readonly MINIMAX: string
+			  }
 		readonly durationSec: number
 		readonly aspectRatio: '9:16'
 		readonly fps: 30
@@ -118,15 +183,17 @@ export class GenerateVideoUseCase {
 		const variantDecision = this.variantPolicy.resolveVariants(input.planTier)
 		const targetClipCount = input.planTier === PlanTier.FREE ? 2 : 3
 		const clipDurationSec = Math.max(5, Math.floor(variantDecision.maxDurationSec / targetClipCount))
-		const prompts = [promptSet.runway, promptSet.hailuo, promptSet.geminiVeo]
+		const clipPhases = resolveClipPhases(targetClipCount)
 
 		const generatedClips = await Promise.all(
 			Array.from({ length: targetClipCount }).map(async (_, index) => {
+				const phase = clipPhases[index] ?? 'CTA'
+				const providerPrompts = buildProviderPromptBundle(promptSet, buildClipPhaseDirective(phase))
 				const clip = await this.i2vRouter.generateClip({
 					planTier: input.planTier,
 					isFirstVideo: input.isFirstVideo && index === 0,
 					imageUrl: foreground.imageUrl,
-					prompt: prompts[index] ?? promptSet.runway,
+					prompt: providerPrompts,
 					durationSec: clipDurationSec,
 					aspectRatio: '9:16',
 					fps: 30,

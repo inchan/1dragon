@@ -1,5 +1,6 @@
 import { Queue, type Job, type QueueOptions } from 'bullmq'
 import IORedis from 'ioredis'
+import type { PlanTier } from '@snapvid/shared'
 import { config } from '../../shared/config.js'
 
 // Redis connection singleton
@@ -75,6 +76,8 @@ export interface MediaGenerateJobData {
 	options: {
 		duration: number
 		stylePreset?: string
+		planTier?: PlanTier
+		isFirstVideo?: boolean
 	}
 }
 

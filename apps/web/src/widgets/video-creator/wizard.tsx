@@ -116,6 +116,7 @@ export function VideoCreatorWizard(): JSX.Element {
 	const [skipModelPersona, setSkipModelPersona] = useState(false)
 	const [compositeImageUrl, setCompositeImageUrl] = useState<string | null>(null)
 	const [isCompositeLoading, setIsCompositeLoading] = useState(false)
+	const [analysisResult, setAnalysisResult] = useState<import('@/lib/api').AnalyzeProductResponse | null>(null)
 
 	const [variants, setVariants] = useState<VideoVariantItem[]>([])
 	const [selectedPlatform, setSelectedPlatform] = useState<VideoPlatform>('tiktok')
@@ -259,17 +260,33 @@ export function VideoCreatorWizard(): JSX.Element {
 		)
 	}
 
-	function generateCompositePreview(): void {
+	async function generateCompositePreview(): Promise<void> {
+		if (skipModelPersona || !previewUrl) {
+			return
+		}
+
 		setCompositeImageUrl(null)
 		setIsCompositeLoading(true)
-		window.setTimeout(() => {
-			if (skipModelPersona || !previewUrl) {
-				setCompositeImageUrl(null)
+
+		try {
+			const result = await api.generateModelComposite({
+				productImageUrl: analysisResult?.originalImageUrl ?? previewUrl,
+				...(productName.trim() ? { productName: productName.trim() } : {}),
+				productCategory: category,
+				productKeywords: analysisResult?.keywords ?? [],
+				persona: selectedPersonaOption,
+			})
+
+			if (result.compositeImageUrl) {
+				setCompositeImageUrl(result.compositeImageUrl)
 			} else {
 				setCompositeImageUrl(previewUrl)
 			}
+		} catch {
+			setCompositeImageUrl(previewUrl)
+		} finally {
 			setIsCompositeLoading(false)
-		}, 500)
+		}
 	}
 
 	async function startGeneration(): Promise<void> {
@@ -302,8 +319,13 @@ export function VideoCreatorWizard(): JSX.Element {
 				category,
 			})
 
+			setAnalysisResult(analysis)
+
+			const effectiveImageUrl =
+				!skipModelPersona && compositeImageUrl ? compositeImageUrl : analysis.originalImageUrl
+
 			const jobResult = await api.createVideoJob({
-				imageUrl: analysis.originalImageUrl,
+				imageUrl: effectiveImageUrl,
 				stylePreset: selectedStyle,
 				platforms: [mapPlatformForApi(selectedPlatform)],
 				duration: CREATE_JOB_DEFAULT_DURATION,

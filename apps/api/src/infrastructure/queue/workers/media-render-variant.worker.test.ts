@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../bullmq.config.js', () => ({
 	QueueName: {
-		MEDIA_RENDER_VARIANT: 'media:render-variant',
+		MEDIA_RENDER_VARIANT: 'media-render-variant',
 	},
 	redisConnection: {},
 }))
@@ -25,6 +25,6 @@ describe('processMediaRenderVariantJob', () => {
 
 		const result = await processMediaRenderVariantJob(job)
 		expect(result.platform).toBe('INSTAGRAM_REELS')
-		expect(result.variantUrl).toContain('https://cdn.snapvid.ai/rendered/')
+		expect(result.variantUrl).toBe('https://cdn.example.com/master.mp4')
 	})
 })

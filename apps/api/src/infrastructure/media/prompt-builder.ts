@@ -52,24 +52,41 @@ function joinKeywords(values: ReadonlyArray<string>): string {
 	return keywords.length > 0 ? keywords.join(', ') : 'product focused marketing'
 }
 
+function buildCategoryHint(category: string): string {
+	switch (category.trim().toUpperCase()) {
+		case 'FASHION':
+			return 'Highlight garment drape, fabric texture, stitching, and silhouette continuity with realistic micro-motion.'
+		case 'BEAUTY':
+			return 'Focus on packaging finish, gloss/reflection control, and clean hero framing.'
+		case 'ACCESSORIES':
+			return 'Emphasize material shine, edges, and fine details with premium close-up motion.'
+		default:
+			return 'Prioritize clear product readability, stable geometry, and natural camera-led motion.'
+	}
+}
+
 function buildBaseNarrative(input: BuildPromptInput): string {
 	const style = STYLE_CONFIGS[input.stylePreset] ?? DEFAULT_STYLE_CONFIG
 	const mood = input.moods.join(', ') || 'professional'
 	const keywords = joinKeywords(input.keywords)
+	const categoryHint = buildCategoryHint(input.productCategory)
 
 	return [
-		`Category: ${input.productCategory}.`,
-		`Mood: ${mood}.`,
+		`Product category: ${input.productCategory}.`,
+		`Mood direction: ${mood}.`,
 		`Keywords: ${keywords}.`,
-		`Style direction: ${input.stylePreset}.`,
-		`Camera: ${style.cameraMovement}.`,
-		`Transition: ${style.transition}.`,
-		`Pacing: ${style.pace}.`,
-		`Color grade: ${style.colorTone}.`,
-		`Hook: ${input.copy.hook}.`,
-		`Description: ${input.copy.description}.`,
-		`CTA: ${input.copy.cta}.`,
-		'Keep product details accurate and readable.',
+		`Style preset: ${input.stylePreset}.`,
+		`Camera movement guideline: ${style.cameraMovement}.`,
+		`Transition guideline: ${style.transition}.`,
+		`Pacing guideline: ${style.pace}.`,
+		`Color tone guideline: ${style.colorTone}.`,
+		`Marketing hook: ${input.copy.hook}.`,
+		`Product description highlight: ${input.copy.description}.`,
+		`Call to action tone: ${input.copy.cta}.`,
+		categoryHint,
+		'Maintain exact product identity from source image: do not change silhouette, logo, typography, or key visual marks.',
+		'Move camera/background rather than deforming the product. Keep composition brand-safe and ad-appropriate.',
+		'Open with camera motion already in progress from frame 1. no freeze frame at video start. Video begins mid-movement, not from a static standstill.',
 	].join(' ')
 }
 
@@ -78,10 +95,10 @@ export class PromptBuilder implements PromptBuilderPort {
 		const narrative = buildBaseNarrative(input)
 
 		return {
-			runway: `RUNWAY_GEN4_TURBO | image_ref required | ${narrative} | motion_strength=0.6`,
-			hailuo: `HAILUO_02 | source_image mode | ${narrative} | clip_structure=intro,detail,cta`,
-			geminiVeo: `GEMINI_VEO | multimodal prompt | ${narrative} | preserve brand-safe output`,
-			minimax: `MINIMAX_VIDEO | image_to_video preset=ad_short | ${narrative} | optimize for 9:16 shortform`,
+			runway: `RUNWAY_GEN4_TURBO. Use image reference mode. ${narrative} Motion strength medium. Output: cinematic 9:16 ecommerce short.`,
+			hailuo: `HAILUO_02 source-image workflow. ${narrative} Keep stable product geometry and cinematic motion rhythm for short-form commerce.`,
+			geminiVeo: `GEMINI_VEO multimodal image-to-video. ${narrative} Generate polished 9:16 ad clip with smooth camera choreography and strict identity preservation.`,
+			minimax: `MINIMAX_VIDEO image-to-video ad preset. ${narrative} Optimize visual clarity and conversion-focused framing for vertical short video.`,
 		}
 	}
 }

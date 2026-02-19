@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../bullmq.config.js', () => ({
 	QueueName: {
-		MEDIA_COMPOSE: 'media:compose',
+		MEDIA_COMPOSE: 'media-compose',
 	},
 	redisConnection: {},
 }))
@@ -27,6 +27,6 @@ describe('processMediaComposeJob', () => {
 		} as Job<MediaComposeJobData>
 
 		const result = await processMediaComposeJob(job)
-		expect(result.masterVideoUrl).toContain('https://cdn.snapvid.ai/rendered/')
+		expect(result.masterVideoUrl).toBe('https://cdn.example.com/clip1.mp4')
 	})
 })

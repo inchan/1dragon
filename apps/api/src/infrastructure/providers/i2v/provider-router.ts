@@ -10,7 +10,8 @@ type ProviderChainInput = {
 	readonly isFirstVideo: boolean
 }
 
-type RouterGenerateInput = Omit<I2VGenerateInput, 'provider'> & {
+type RouterGenerateInput = Omit<I2VGenerateInput, 'provider' | 'prompt'> & {
+	readonly prompt: string | Record<I2VProviderName, string>
 	readonly planTier: PlanTierType
 	readonly isFirstVideo: boolean
 	readonly jobId?: string
@@ -23,8 +24,8 @@ type CircuitSnapshot = {
 	openedAt: number | null
 }
 
-const PAID_CHAIN: readonly I2VProviderName[] = ['GEMINI_VEO', 'RUNWAY', 'MINIMAX', 'HAILUO']
-const FREE_CHAIN: readonly I2VProviderName[] = ['GEMINI_VEO', 'HAILUO', 'MINIMAX']
+const PAID_CHAIN: readonly I2VProviderName[] = ['RUNWAY', 'GEMINI_VEO', 'MINIMAX', 'HAILUO']
+const FREE_CHAIN: readonly I2VProviderName[] = ['HAILUO', 'MINIMAX', 'GEMINI_VEO']
 
 export class AllI2VProvidersFailedError extends Error {
 	public readonly attemptedProviders: I2VProviderName[]
@@ -73,10 +74,15 @@ export class ProviderRouter {
 			}
 
 			try {
+				const prompt =
+					typeof input.prompt === 'string'
+						? input.prompt
+						: input.prompt[providerName] ?? input.prompt.RUNWAY
+
 				const output = await provider.generate({
 					provider: providerName,
 					imageUrl: input.imageUrl,
-					prompt: input.prompt,
+					prompt,
 					durationSec: input.durationSec,
 					aspectRatio: input.aspectRatio,
 					fps: input.fps,

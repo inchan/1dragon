@@ -7,7 +7,7 @@ import { logger } from '../logging/index.js'
 /**
  * 계정 정리 스케줄러 큐 이름
  */
-export const ACCOUNT_CLEANUP_QUEUE_NAME = 'scheduler:account-cleanup'
+export const ACCOUNT_CLEANUP_QUEUE_NAME = 'scheduler-account-cleanup'
 
 /**
  * 계정 정리 작업 데이터 타입

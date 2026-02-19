@@ -22,4 +22,19 @@ describe('PromptBuilder', () => {
 		expect(output.minimax).toContain('MINIMAX_VIDEO')
 		expect(output.runway).toContain('올여름 필수 원피스')
 	})
+
+	it('all provider prompts include cold-open in-motion instruction to prevent freeze frame', async () => {
+		const builder = new PromptBuilder()
+		const output = await builder.build({
+			productCategory: 'BEAUTY',
+			moods: ['PREMIUM'],
+			keywords: ['serum', 'glow'],
+			stylePreset: 'PREMIUM',
+			copy: { hook: 'Perfect Skin', description: 'Premium serum', cta: 'Shop Now' },
+		})
+
+		for (const prompt of [output.runway, output.hailuo, output.geminiVeo, output.minimax]) {
+			expect(prompt).toContain('no freeze frame')
+		}
+	})
 })

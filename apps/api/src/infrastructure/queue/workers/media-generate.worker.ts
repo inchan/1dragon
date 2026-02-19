@@ -48,8 +48,12 @@ const DEFAULT_COPY = {
 	cta: '지금 확인해 보세요',
 } as const
 
-function resolvePlanTier(duration: number): PlanTier {
-	return duration > 15 ? PlanTier.STARTER : PlanTier.FREE
+function resolvePlanTier(input: { duration: number; planTier?: PlanTier }): PlanTier {
+	if (input.planTier === PlanTier.STARTER || input.planTier === PlanTier.FREE) {
+		return input.planTier
+	}
+
+	return input.duration > 15 ? PlanTier.STARTER : PlanTier.FREE
 }
 
 function normalizeProgress(status: string): number {
@@ -168,7 +172,11 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 		throw new Error(`Video job not found: ${jobId}`)
 	}
 
-	const planTier = resolvePlanTier(job.data.options.duration)
+	const planTier = resolvePlanTier({
+		duration: job.data.options.duration,
+		...(job.data.options.planTier !== undefined ? { planTier: job.data.options.planTier } : {}),
+	})
+	const isFirstVideo = job.data.options.isFirstVideo === true
 
 	const currentStatus = existing.status as JobStatus
 	const currentRetryCount = buildRetryCount(existing.retryCount)
@@ -178,7 +186,7 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			jobId,
 			userId,
 			planTier,
-			isFirstVideo: false,
+			isFirstVideo,
 			inputImageUrl: job.data.imageUrl,
 			stylePreset: job.data.options.stylePreset ?? 'SIMPLE',
 			productCategory: job.data.productCategory ?? 'OTHER',

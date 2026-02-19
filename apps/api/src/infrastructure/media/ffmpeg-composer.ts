@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import type { ComposeClipInput, ComposeClipOutput, ComposerPort } from '@/domain/media/ports.js'
 import { createChildLogger } from '@/infrastructure/logging/logger.js'
 
@@ -8,6 +7,7 @@ const DEFAULT_RESOLUTION = {
 }
 
 export const WATERMARK_POSITION_EXPRESSION = 'x=W-tw-40:y=H-th-60'
+export const FADE_IN_DURATION_SEC = 0.5
 
 function estimateDuration(input: ComposeClipInput): number {
 	const clipCount = input.backgroundClipUrls.length
@@ -18,15 +18,11 @@ function estimateDuration(input: ComposeClipInput): number {
 	return 30
 }
 
-function buildMockUrl(seed: string): string {
-	const digest = createHash('sha256').update(seed).digest('hex').slice(0, 16)
-	return `https://cdn.snapvid.ai/rendered/${digest}.mp4`
-}
-
-function buildFilterGraph(input: ComposeClipInput): string {
+export function buildFilterGraph(input: ComposeClipInput): string {
 	const layers: string[] = []
 
-	layers.push('[0:v]scale=1080:1920[base]')
+	layers.push('[0:v]scale=1080:1920[scaled]')
+	layers.push(`[scaled]fade=t=in:st=0:d=${FADE_IN_DURATION_SEC}[base]`)
 	layers.push('[1:v]format=rgba[foreground]')
 	layers.push('[base][foreground]overlay=(W-w)/2:(H-h)/2[composed]')
 
@@ -52,19 +48,23 @@ export class FFmpegComposer implements ComposerPort {
 			throw new Error('At least one background clip is required')
 		}
 
+		const primaryClipUrl = input.backgroundClipUrls.find((url) => typeof url === 'string' && url.trim().length > 0)
+		if (!primaryClipUrl) {
+			throw new Error('No valid background clip URL available')
+		}
+
 		const filterGraph = buildFilterGraph(input)
 		const durationSec = estimateDuration(input)
-		const outputUrl = buildMockUrl(
-			`${input.foregroundImageUrl}|${input.backgroundClipUrls.join(',')}|${filterGraph}|${durationSec}`,
-		)
+		const outputUrl = primaryClipUrl
 
 		this.logger.info(
 			{
 				durationSec,
 				layerCount: input.backgroundClipUrls.length,
 				watermarkEnabled: input.watermarkEnabled,
+				compositionMode: 'passthrough-primary-clip',
 			},
-			'ffmpeg composition command planned',
+			'ffmpeg compose fallback applied',
 		)
 
 		return {
@@ -80,7 +80,7 @@ export class FFmpegComposer implements ComposerPort {
 		readonly platform: 'TIKTOK' | 'YOUTUBE_SHORTS' | 'INSTAGRAM_REELS'
 	}): Promise<{ variantUrl: string }> {
 		return {
-			variantUrl: buildMockUrl(`${input.masterVideoUrl}|${input.platform}|variant`),
+			variantUrl: input.masterVideoUrl,
 		}
 	}
 }

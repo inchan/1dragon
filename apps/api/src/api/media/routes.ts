@@ -1,14 +1,14 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, count, desc, eq } from 'drizzle-orm'
 import { createHash, randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { ErrorCode } from '@snapvid/shared'
+import { ErrorCode, PlanTier, productCategorySchema } from '@snapvid/shared'
 import { createVideoJobRequestSchema } from '@snapvid/shared'
 import { requireAuth } from '@/infrastructure/auth/hono-handler.js'
 import { logger } from '@/infrastructure/logging/index.js'
 import { sseBroker } from '@/infrastructure/notification/sse-broker.js'
 import { db } from '@/infrastructure/persistence/db.js'
-import { jobEvents, videoJobs } from '@/infrastructure/persistence/schema.js'
+import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
 import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
 import {
 	QueueName,
@@ -18,6 +18,9 @@ import {
 import { VideoJobRepositoryImpl, VideoVariantRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
 import { MetaGraphAdapter, TikTokBusinessAdapter } from '@/infrastructure/providers/social/index.js'
 import { config } from '@/shared/config.js'
+import { GeminiModelCompositeAdapter } from '@/infrastructure/providers/image-gen/gemini-model-composite.adapter.js'
+import { GenerateModelImageUseCase } from '@/application/model-persona/generate-model-image.usecase.js'
+import type { ModelPersonaSelectionRepository, PersonaSelectionCreateInput, PersonaSelectionRecord } from '@/domain/model-persona/ports.js'
 
 const MAX_RETRY_COUNT = 2
 const CREATE_JOB_DEFAULT_DURATION = 15
@@ -536,6 +539,29 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
+		const [videoCountRow] = await db
+			.select({
+				totalJobs: count(),
+			})
+			.from(videoJobs)
+			.where(eq(videoJobs.userId, user.id))
+		const existingVideoCountRaw = videoCountRow?.totalJobs ?? 0
+		const existingVideoCount =
+			typeof existingVideoCountRaw === 'number'
+				? existingVideoCountRaw
+				: Number(existingVideoCountRaw)
+		const isFirstVideo = existingVideoCount === 0
+
+		const currentSubscription = await db.query.subscriptions.findFirst({
+			where: eq(subscriptions.userId, user.id),
+			with: { plan: true },
+			orderBy: [desc(subscriptions.createdAt)],
+		})
+		const planTier =
+			currentSubscription?.plan?.tier === PlanTier.STARTER
+				? PlanTier.STARTER
+				: PlanTier.FREE
+
 		let created:
 			| Awaited<ReturnType<(typeof jobRepository)['create']>>
 			| null = null
@@ -576,6 +602,8 @@ export function createMediaRouter(): Hono {
 			options: {
 				duration: parsed.data.duration ?? CREATE_JOB_DEFAULT_DURATION,
 				stylePreset: parsed.data.stylePreset,
+				planTier,
+				isFirstVideo,
 			},
 		}
 
@@ -953,6 +981,110 @@ export function createMediaRouter(): Hono {
 				shareUrl: shared.output.shareUrl,
 			},
 		})
+	})
+
+	const modelCompositeBodySchema = z.object({
+		productImageUrl: z.string().url(),
+		productName: z.string().min(1),
+		productCategory: productCategorySchema,
+		productKeywords: z.array(z.string()),
+		persona: z.object({
+			id: z.string().min(1),
+			gender: z.enum(['FEMALE', 'MALE', 'NON_BINARY']),
+			ageRange: z.enum(['YOUNG_ADULT', 'ADULT', 'MIDDLE_AGED', 'SENIOR']),
+			bodyType: z.enum(['SLIM', 'REGULAR']),
+			style: z.enum(['CASUAL', 'FORMAL', 'STREET', 'MINIMAL']),
+			imagenPromptTemplate: z.string().min(1),
+		}),
+	})
+
+	const stubSelectionRepository: ModelPersonaSelectionRepository = {
+		create: async (input: PersonaSelectionCreateInput): Promise<PersonaSelectionRecord> => ({
+			id: `stub-${Date.now()}`,
+			userId: input.userId,
+			jobId: input.jobId ?? null,
+			presetId: input.presetId,
+			generatedImageUrl: input.generatedImageUrl ?? null,
+			qualityScore: input.qualityScore ?? null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		}),
+		findByJobId: async () => null,
+		findByUserId: async () => ({ items: [], total: 0 }),
+	}
+
+	app.post('/model-composite', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const body = await parseJsonBody(c, user.id, 'POST /api/v1/media/model-composite')
+		const parsed = modelCompositeBodySchema.safeParse(body)
+		if (!parsed.success) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: ErrorCode.VALIDATION,
+						message: 'Validation failed',
+						details: { fieldErrors: mapFieldErrors(parsed.error.errors) },
+					},
+				},
+				400,
+			)
+		}
+
+		const compositeAdapter = new GeminiModelCompositeAdapter({
+			...(process.env.GEMINI_VEO_API_KEY ? { apiKey: process.env.GEMINI_VEO_API_KEY } : {}),
+		})
+		const useCase = new GenerateModelImageUseCase(compositeAdapter, stubSelectionRepository)
+
+		try {
+			const result = await useCase.execute({
+				userId: user.id,
+				productImageUrl: parsed.data.productImageUrl,
+				productName: parsed.data.productName,
+				productCategory: parsed.data.productCategory,
+				productKeywords: parsed.data.productKeywords,
+				preset: {
+					id: parsed.data.persona.id,
+					name: parsed.data.persona.id,
+					gender: parsed.data.persona.gender,
+					ageRange: parsed.data.persona.ageRange,
+					bodyType: parsed.data.persona.bodyType,
+					style: parsed.data.persona.style,
+					imagenPromptTemplate: parsed.data.persona.imagenPromptTemplate,
+					previewImageUrl: null,
+					isActive: true,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				},
+			})
+
+			return c.json({
+				success: true,
+				data: {
+					compositeImageUrl: result.generatedImageUrl,
+					qualityScore: result.qualityScore,
+					accepted: result.accepted,
+					fallbackToProductOnly: result.fallbackToProductOnly,
+					message: result.message,
+				},
+			})
+		} catch (error) {
+			logger.error({ userId: user.id, error }, 'model-composite generation failed')
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'PROVIDER_ERROR',
+						message: error instanceof Error ? error.message : '모델 합성 이미지 생성에 실패했습니다',
+					},
+				},
+				503,
+			)
+		}
 	})
 
 	return app

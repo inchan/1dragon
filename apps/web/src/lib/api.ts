@@ -339,4 +339,29 @@ export const api = {
 
 	getVideoJob: (jobId: string): Promise<MediaJobStatusResponse> =>
 		fetchApi<MediaJobStatusResponse>(`/api/v1/media/jobs/${jobId}`),
+
+	generateModelComposite: (payload: {
+		productImageUrl: string
+		productName?: string
+		productCategory: string
+		productKeywords: string[]
+		persona: {
+			id: string
+			gender: string
+			ageRange: string
+			bodyType: string
+			style: string
+			imagenPromptTemplate?: string
+		}
+	}): Promise<{
+		compositeImageUrl: string | null
+		qualityScore: number | null
+		accepted: boolean
+		fallbackToProductOnly: boolean
+		message: string
+	}> =>
+		fetchApi('/api/v1/media/model-composite', {
+			method: 'POST',
+			body: JSON.stringify(payload),
+		}),
 }

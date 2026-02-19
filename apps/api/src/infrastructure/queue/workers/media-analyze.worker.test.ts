@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../bullmq.config.js', () => ({
 	QueueName: {
-		MEDIA_ANALYZE: 'media:analyze',
+		MEDIA_ANALYZE: 'media-analyze',
 	},
 	redisConnection: {},
 }))

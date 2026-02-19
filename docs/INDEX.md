@@ -25,6 +25,10 @@
 - **[MVP 범위 (MVP Scope)](03-product/MVP_SCOPE.md)**: MVP 기능, 일정, 마일스톤
 - **[기능 명세서 (Feature Spec)](03-product/FEATURE_SPEC.md)**: 상세 기능 정의, 예외 처리
 - **[사용자 플로우 (User Flows)](03-product/USER_FLOWS.md)**: UX 플로우, 와이어프레임
+- **[숏폼 커머스 실전 제작 SOP](03-product/SHORTFORM_COMMERCE_PRODUCTION_SOP.md)**: 조사→탐색→분석→계획→구현→테스트→리뷰 기반 실행 지침
+  - [15초 샷리스트 템플릿](03-product/templates/shortform_15s_shotlist.csv)
+  - [A/B 테스트 매트릭스 템플릿](03-product/templates/ab_test_matrix.csv)
+  - [7일 제작 콜시트 템플릿](03-product/templates/production_callsheet_7day.md)
 
 ### 4. Simulation (검증 및 시뮬레이션)
 - **[변증법 분석 (Dialectic Analysis)](04-simulation/dialectic-analysis/hub.md)**

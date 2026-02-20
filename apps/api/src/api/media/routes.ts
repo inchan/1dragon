@@ -1095,7 +1095,7 @@ export function createMediaRouter(): Hono {
 					success: false,
 					error: {
 						code: 'PROVIDER_ERROR',
-						message: error instanceof Error ? error.message : '모델 합성 이미지 생성에 실패했습니다',
+						message: '모델 합성 이미지 생성에 실패했습니다',
 					},
 				},
 				503,

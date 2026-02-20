@@ -34,6 +34,7 @@ const BASE_INPUT = {
 	productCategory: ProductCategory.FASHION,
 	productKeywords: ['floral', 'dress'],
 	preset: PRESET,
+	userId: 'test-user-id',
 }
 
 describe('providers/image-gen/gemini-model-composite.adapter', () => {
@@ -115,7 +116,7 @@ describe('providers/image-gen/gemini-model-composite.adapter', () => {
 			expect(uploadMock).toHaveBeenCalledOnce()
 			const [uploadedBuffer, uploadedKey, uploadedMime] = uploadMock.mock.calls[0] as [Buffer, string, string]
 			expect(Buffer.isBuffer(uploadedBuffer)).toBe(true)
-			expect(uploadedKey).toMatch(/^model-composites\/anon\/\d+-[0-9a-f-]+-composite\.png$/)
+			expect(uploadedKey).toMatch(/^model-composites\/test-user-id\/\d+-[0-9a-f-]+-composite\.png$/)
 			expect(uploadedMime).toBe('image/png')
 
 			expect(result.provider).toBe('GEMINI_IMAGEN')

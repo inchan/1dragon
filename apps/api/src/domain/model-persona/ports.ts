@@ -67,7 +67,7 @@ export interface ModelImageGenerationInput {
 		readonly style: PersonaStyle
 		readonly imagenPromptTemplate: string
 	}
-	readonly userId?: string
+	readonly userId: string
 	readonly retryAttempt?: number
 	readonly qualityHint?: string
 }

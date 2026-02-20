@@ -20,7 +20,7 @@ import { MetaGraphAdapter, TikTokBusinessAdapter } from '@/infrastructure/provid
 import { config } from '@/shared/config.js'
 import { GeminiModelCompositeAdapter } from '@/infrastructure/providers/image-gen/gemini-model-composite.adapter.js'
 import { GenerateModelImageUseCase } from '@/application/model-persona/generate-model-image.usecase.js'
-import type { ModelPersonaSelectionRepository, PersonaSelectionCreateInput, PersonaSelectionRecord } from '@/domain/model-persona/ports.js'
+import { ModelPersonaSelectionRepositoryImpl } from '@/infrastructure/persistence/repositories/model-persona-selection.repository.js'
 
 const MAX_RETRY_COUNT = 2
 const CREATE_JOB_DEFAULT_DURATION = 15
@@ -383,6 +383,14 @@ export function createMediaRouter(): Hono {
 	const instagramConnections = new Map<string, string>()
 	const jobRepository = new VideoJobRepositoryImpl()
 	const variantRepository = new VideoVariantRepositoryImpl()
+
+	// C-2: 어댑터와 유스케이스를 라우터 생성 시 한 번만 인스턴스화
+	const imagenApiKey = process.env.GEMINI_IMAGEN_API_KEY ?? process.env.GEMINI_VEO_API_KEY
+	const compositeAdapter = new GeminiModelCompositeAdapter({
+		...(imagenApiKey ? { apiKey: imagenApiKey } : {}),
+	})
+	const selectionRepository = new ModelPersonaSelectionRepositoryImpl()
+	const generateModelImageUseCase = new GenerateModelImageUseCase(compositeAdapter, selectionRepository)
 
 	app.use('*', requireAuth)
 
@@ -1024,21 +1032,6 @@ export function createMediaRouter(): Hono {
 		}),
 	})
 
-	const stubSelectionRepository: ModelPersonaSelectionRepository = {
-		create: async (input: PersonaSelectionCreateInput): Promise<PersonaSelectionRecord> => ({
-			id: `stub-${Date.now()}`,
-			userId: input.userId,
-			jobId: input.jobId ?? null,
-			presetId: input.presetId,
-			generatedImageUrl: input.generatedImageUrl ?? null,
-			qualityScore: input.qualityScore ?? null,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		}),
-		findByJobId: async () => null,
-		findByUserId: async () => ({ items: [], total: 0 }),
-	}
-
 	app.post('/model-composite', async (c) => {
 		const user = c.get('user')
 		if (!user) {
@@ -1061,15 +1054,8 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
-		// Google AI Studio 키는 Veo와 Imagen 3 모두 지원 — GEMINI_IMAGEN_API_KEY 우선, 없으면 GEMINI_VEO_API_KEY 재사용
-		const imagenApiKey = process.env.GEMINI_IMAGEN_API_KEY ?? process.env.GEMINI_VEO_API_KEY
-		const compositeAdapter = new GeminiModelCompositeAdapter({
-			...(imagenApiKey ? { apiKey: imagenApiKey } : {}),
-		})
-		const useCase = new GenerateModelImageUseCase(compositeAdapter, stubSelectionRepository)
-
 		try {
-			const result = await useCase.execute({
+			const result = await generateModelImageUseCase.execute({
 				userId: user.id,
 				productImageUrl: parsed.data.productImageUrl,
 				...(parsed.data.productName ? { productName: parsed.data.productName } : {}),

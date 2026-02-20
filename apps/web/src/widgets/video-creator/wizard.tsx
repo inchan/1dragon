@@ -11,6 +11,7 @@ import {
 	Select,
 } from '@snapvid/ui'
 import { ProductCategory, type ProductCategory as ProductCategoryType } from '@snapvid/shared'
+import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState, type JSX } from 'react'
 import {
 	CopySelection,
@@ -82,6 +83,7 @@ const INITIAL_COPY_VARIANTS = createDefaultCopyVariants('상품')
 
 export function VideoCreatorWizard(): JSX.Element {
 	const queryClient = useQueryClient()
+	const navigate = useNavigate()
 	const personaCatalog = useMemo(() => buildPersonaCatalog(), [])
 
 	const [step, setStep] = useState<WizardStep>('UPLOAD')
@@ -153,9 +155,15 @@ export function VideoCreatorWizard(): JSX.Element {
 			setGenerationError(message.payload.errorMessage ?? null)
 
 			if (message.payload.newStatus === 'SUCCEEDED') {
-				void fetchAndSetVariants(jobId).finally(() => {
-					setStep('PREVIEW')
-				})
+				void fetchAndSetVariants(jobId)
+					.then(() => {
+						setStep('PREVIEW')
+					})
+					.catch((err: unknown) => {
+						setGenerationError(err instanceof Error ? err.message : '영상 정보를 불러오지 못했습니다.')
+						setStep('GENERATE')
+						setGenerationCanRetry(true)
+					})
 			}
 		},
 		[jobId],
@@ -202,6 +210,11 @@ export function VideoCreatorWizard(): JSX.Element {
 		if (previewUrl) {
 			URL.revokeObjectURL(previewUrl)
 		}
+
+		setAnalysisResult(null)
+		setAnalyzed(false)
+		setAnalyzeError(null)
+		setCompositeImageUrl(null)
 
 		if (!file) {
 			setSelectedFile(null)
@@ -408,16 +421,11 @@ export function VideoCreatorWizard(): JSX.Element {
 	}
 
 	function regenerateVariant(): void {
-		if (!selectedVariant || remainingRegenerations <= 0) {
-			return
-		}
-
-		setPreviousVideoUrl(selectedVariant.videoUrl)
-		setCandidateVideoUrl(
-			`${selectedVariant.videoUrl}${selectedVariant.videoUrl.includes('?') ? '&' : '?'}regen=${Date.now()}`,
-		)
-		setCandidatePlatform(selectedPlatform)
-		setRemainingRegenerations((value) => Math.max(0, value - 1))
+		setStep('STYLE')
+		setGenerationError(null)
+		setGenerationStatus('QUEUED')
+		setVariants([])
+		setJobId('')
 	}
 
 	function acceptCandidate(): void {
@@ -672,7 +680,7 @@ export function VideoCreatorWizard(): JSX.Element {
 						<Button
 							type="button"
 							variant="outline"
-							onClick={() => window.location.assign('/dashboard')}
+							onClick={() => { void navigate({ to: '/dashboard' }) }}
 						>
 							대시보드로 이동
 						</Button>
@@ -694,7 +702,7 @@ export function VideoCreatorWizard(): JSX.Element {
 							<Button
 								type="button"
 								variant="outline"
-								onClick={() => window.location.assign('/pricing')}
+								onClick={() => { void navigate({ to: '/pricing' }) }}
 							>
 								플랜 업그레이드
 							</Button>

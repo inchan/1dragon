@@ -2,6 +2,14 @@ import { ProductCategory } from '@snapvid/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GeminiModelCompositeAdapter } from './gemini-model-composite.adapter.js'
 
+vi.mock('@/infrastructure/logging/index.js', () => ({
+	logger: {
+		info: vi.fn(),
+		error: vi.fn(),
+		warn: vi.fn(),
+	},
+}))
+
 vi.mock('@/infrastructure/storage/s3-client.js', () => ({
 	uploadImage: vi.fn().mockResolvedValue({
 		key: 'model-composites/anon/123-composite.png',
@@ -107,7 +115,7 @@ describe('providers/image-gen/gemini-model-composite.adapter', () => {
 			expect(uploadMock).toHaveBeenCalledOnce()
 			const [uploadedBuffer, uploadedKey, uploadedMime] = uploadMock.mock.calls[0] as [Buffer, string, string]
 			expect(Buffer.isBuffer(uploadedBuffer)).toBe(true)
-			expect(uploadedKey).toMatch(/^model-composites\/anon\/\d+-composite\.png$/)
+			expect(uploadedKey).toMatch(/^model-composites\/anon\/\d+-[0-9a-f-]+-composite\.png$/)
 			expect(uploadedMime).toBe('image/png')
 
 			expect(result.provider).toBe('GEMINI_IMAGEN')
@@ -123,7 +131,7 @@ describe('providers/image-gen/gemini-model-composite.adapter', () => {
 
 			const adapter = new GeminiModelCompositeAdapter({ apiKey: 'test-api-key' })
 
-			await expect(adapter.generateComposite(BASE_INPUT)).rejects.toThrow('Imagen API error 429')
+			await expect(adapter.generateComposite(BASE_INPUT)).rejects.toThrow('이미지 생성에 실패했습니다. (status: 429)')
 		})
 
 		it('Imagen API가 예측값 없이 응답하면 에러를 throw한다', async () => {

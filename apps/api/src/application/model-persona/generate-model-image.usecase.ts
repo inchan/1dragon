@@ -60,6 +60,7 @@ export class GenerateModelImageUseCase {
 					style: input.preset.style,
 					imagenPromptTemplate: input.preset.imagenPromptTemplate,
 				},
+				userId: input.userId,
 				retryAttempt: attempts,
 				qualityHint,
 				...(input.productName ? { productName: input.productName } : {}),

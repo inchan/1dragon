@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ClaudeHaikuCopywriterAdapter } from './claude-haiku.adapter.js'
 
+vi.mock('@/infrastructure/logging/index.js', () => ({
+	logger: {
+		info: vi.fn(),
+		error: vi.fn(),
+		warn: vi.fn(),
+	},
+}))
+
 describe('ClaudeHaikuCopywriterAdapter', () => {
 	afterEach(() => {
 		vi.unstubAllGlobals()

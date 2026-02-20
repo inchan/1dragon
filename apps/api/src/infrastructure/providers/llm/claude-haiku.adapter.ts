@@ -1,3 +1,4 @@
+import { logger } from '@/infrastructure/logging/index.js'
 import type { CopyGenerationInput, CopyGenerationOutput, CopyVariant } from './types.js'
 
 const PLATFORM_TONE: Record<string, string> = {
@@ -64,7 +65,7 @@ function parseApiResponse(text: string): CopyVariant[] | null {
 					warnings: [],
 				}
 			})
-			.filter((v) => v.hookCopy.length > 0)
+			.filter((v) => v.hookCopy.length > 0 && v.bodyCopy.length > 0 && v.ctaCopy.length > 0)
 	} catch {
 		return null
 	}
@@ -127,7 +128,9 @@ export class ClaudeHaikuCopywriterAdapter {
 					},
 				)
 
-				if (response.ok) {
+				if (!response.ok) {
+					logger.error({ status: response.status }, 'Claude Haiku API responded with error status')
+				} else {
 					const data = (await response.json()) as AnthropicMessage
 					const text = data.content?.find((c) => c.type === 'text')?.text ?? ''
 					const parsed = parseApiResponse(text)
@@ -143,8 +146,7 @@ export class ClaudeHaikuCopywriterAdapter {
 					}
 				}
 			} catch (error) {
-				// API 실패 시 폴백 사용
-				console.error('[ClaudeHaikuCopywriter] API call failed, using fallback:', error)
+				logger.error({ error }, 'Claude Haiku API call failed, using fallback')
 			}
 		}
 

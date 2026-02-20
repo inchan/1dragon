@@ -1,9 +1,10 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type {
 	ModelImageGenerationInput,
 	ModelImageGenerationOutput,
 	ModelImageGeneratorPort,
 } from '@/domain/model-persona/ports.js'
+import { logger } from '@/infrastructure/logging/index.js'
 import { uploadImage } from '@/infrastructure/storage/s3-client.js'
 
 type GeminiModelCompositeAdapterOptions = {
@@ -99,7 +100,8 @@ async function callImagenApi(prompt: string, apiKey: string): Promise<Buffer> {
 
 	if (!response.ok) {
 		const errorText = await response.text()
-		throw new Error(`Imagen API error ${response.status}: ${errorText}`)
+		logger.error({ status: response.status, errorText }, 'Imagen API request failed')
+		throw new Error(`이미지 생성에 실패했습니다. (status: ${response.status})`)
 	}
 
 	const data = (await response.json()) as ImagenApiResponse
@@ -143,7 +145,8 @@ export class GeminiModelCompositeAdapter implements ModelImageGeneratorPort {
 		}
 
 		const imageBuffer = await callImagenApi(prompt, this.apiKey)
-		const key = `model-composites/anon/${Date.now()}-composite.png`
+		const userFolder = input.userId ?? 'anon'
+		const key = `model-composites/${userFolder}/${Date.now()}-${randomUUID()}-composite.png`
 		const uploaded = await uploadImage(imageBuffer, key, 'image/png')
 
 		return {

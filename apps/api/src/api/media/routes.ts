@@ -1,5 +1,6 @@
 import { and, count, desc, eq } from 'drizzle-orm'
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { generateOAuthState, saveOAuthState, verifyOAuthState } from './oauth-state.js'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { ErrorCode, PlanTier, productCategorySchema } from '@snapvid/shared'
@@ -25,7 +26,6 @@ import { GenerateModelImageUseCase } from '@/application/model-persona/generate-
 import { ModelPersonaSelectionRepositoryImpl } from '@/infrastructure/persistence/repositories/model-persona-selection.repository.js'
 
 const MAX_RETRY_COUNT = 2
-const OAUTH_STATE_TTL_SECONDS = 600 // 10분
 const CREATE_JOB_DEFAULT_DURATION = 15
 const JOB_POLL_RETRY_INTERVAL_MS = 5_000
 
@@ -750,9 +750,8 @@ export function createMediaRouter(): Hono {
 			return c.json(UNAUTHORIZED_RESPONSE, 401)
 		}
 
-		const nonce = randomBytes(16).toString('hex')
-		const state = `${user.id}:${nonce}`
-		await redisConnection.set(`oauth:state:${state}`, '1', 'EX', OAUTH_STATE_TTL_SECONDS)
+		const { state } = generateOAuthState(user.id)
+		await saveOAuthState(redisConnection, state)
 		return c.json({
 			success: true,
 			data: {
@@ -770,9 +769,8 @@ export function createMediaRouter(): Hono {
 			return c.json(UNAUTHORIZED_RESPONSE, 401)
 		}
 
-		const nonce = randomBytes(16).toString('hex')
-		const state = `${user.id}:${nonce}`
-		await redisConnection.set(`oauth:state:${state}`, '1', 'EX', OAUTH_STATE_TTL_SECONDS)
+		const { state } = generateOAuthState(user.id)
+		await saveOAuthState(redisConnection, state)
 		return c.json({
 			success: true,
 			data: {
@@ -806,23 +804,18 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
-		const storedTiktokState = await redisConnection.get(`oauth:state:${parsed.data.state}`)
-		if (!storedTiktokState) {
+		const tiktokStateResult = await verifyOAuthState(redisConnection, parsed.data.state, user.id)
+		if (!tiktokStateResult.valid) {
 			return c.json(
 				{
 					success: false,
-					error: { code: 'INVALID_STATE', message: 'Invalid or expired OAuth state' },
-				},
-				400,
-			)
-		}
-		await redisConnection.del(`oauth:state:${parsed.data.state}`)
-		const [tiktokStateUserId] = parsed.data.state.split(':')
-		if (tiktokStateUserId !== user.id) {
-			return c.json(
-				{
-					success: false,
-					error: { code: 'INVALID_STATE', message: 'State user mismatch' },
+					error: {
+						code: 'INVALID_STATE',
+						message:
+							tiktokStateResult.reason === 'NOT_FOUND'
+								? 'Invalid or expired OAuth state'
+								: 'State user mismatch',
+					},
 				},
 				400,
 			)
@@ -863,23 +856,18 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
-		const storedInstagramState = await redisConnection.get(`oauth:state:${parsed.data.state}`)
-		if (!storedInstagramState) {
+		const instagramStateResult = await verifyOAuthState(redisConnection, parsed.data.state, user.id)
+		if (!instagramStateResult.valid) {
 			return c.json(
 				{
 					success: false,
-					error: { code: 'INVALID_STATE', message: 'Invalid or expired OAuth state' },
-				},
-				400,
-			)
-		}
-		await redisConnection.del(`oauth:state:${parsed.data.state}`)
-		const [instagramStateUserId] = parsed.data.state.split(':')
-		if (instagramStateUserId !== user.id) {
-			return c.json(
-				{
-					success: false,
-					error: { code: 'INVALID_STATE', message: 'State user mismatch' },
+					error: {
+						code: 'INVALID_STATE',
+						message:
+							instagramStateResult.reason === 'NOT_FOUND'
+								? 'Invalid or expired OAuth state'
+								: 'State user mismatch',
+					},
 				},
 				400,
 			)

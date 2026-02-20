@@ -1,62 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { randomBytes } from 'node:crypto'
+import { generateOAuthState, saveOAuthState, verifyOAuthState } from './oauth-state.js'
 
 // Redis mock
 const mockRedis = {
 	set: vi.fn().mockResolvedValue('OK'),
 	get: vi.fn<(key: string) => Promise<string | null>>(),
 	del: vi.fn().mockResolvedValue(1),
-}
-
-vi.mock('@/infrastructure/queue/bullmq.config.js', () => ({
-	redisConnection: mockRedis,
-	QueueName: {
-		MEDIA_ANALYZE: 'media-analyze',
-		MEDIA_GENERATE: 'media-generate',
-		MEDIA_COMPOSE: 'media-compose',
-		MEDIA_RENDER_VARIANT: 'media-render-variant',
-		NOTIFICATION_DISPATCH: 'notification-dispatch',
-	},
-	addJob: vi.fn(),
-	queues: {},
-}))
-
-// OAuth state 로직을 직접 테스트하는 순수 함수 단위 테스트
-// routes.ts의 state 생성/검증 로직을 추출하여 테스트
-
-const OAUTH_STATE_TTL_SECONDS = 600
-
-function generateOAuthState(userId: string): { state: string; nonce: string } {
-	const nonce = randomBytes(16).toString('hex')
-	const state = `${userId}:${nonce}`
-	return { state, nonce }
-}
-
-async function saveOAuthState(
-	redis: typeof mockRedis,
-	state: string,
-): Promise<void> {
-	await redis.set(`oauth:state:${state}`, '1', 'EX', OAUTH_STATE_TTL_SECONDS)
-}
-
-async function verifyOAuthState(
-	redis: typeof mockRedis,
-	state: string,
-	currentUserId: string,
-): Promise<{ valid: true } | { valid: false; reason: 'NOT_FOUND' | 'USER_MISMATCH' }> {
-	const stored = await redis.get(`oauth:state:${state}`)
-	if (!stored) {
-		return { valid: false, reason: 'NOT_FOUND' }
-	}
-
-	await redis.del(`oauth:state:${state}`)
-
-	const [stateUserId] = state.split(':')
-	if (stateUserId !== currentUserId) {
-		return { valid: false, reason: 'USER_MISMATCH' }
-	}
-
-	return { valid: true }
 }
 
 describe('OAuth state CSRF 보호', () => {
@@ -140,7 +89,7 @@ describe('OAuth state CSRF 보호', () => {
 			expect(mockRedis.del).toHaveBeenCalledTimes(1)
 		})
 
-		it('state의 userId가 현재 사용자와 다르면 USER_MISMATCH를 반환한다', async () => {
+		it('state의 userId가 현재 사용자와 다르면 USER_MISMATCH를 반환하고 state를 삭제하지 않는다', async () => {
 			const stateUserId = 'attacker-user'
 			const currentUserId = 'victim-user'
 			const state = `${stateUserId}:abcdef1234567890abcdef1234567890`
@@ -152,6 +101,8 @@ describe('OAuth state CSRF 보호', () => {
 			if (!result.valid) {
 				expect(result.reason).toBe('USER_MISMATCH')
 			}
+			// userId 불일치 시 state를 삭제하면 안 된다 (합법적 사용자가 재시도 가능해야 함)
+			expect(mockRedis.del).not.toHaveBeenCalled()
 		})
 
 		it('만료된 state에서는 DEL을 호출하지 않는다', async () => {

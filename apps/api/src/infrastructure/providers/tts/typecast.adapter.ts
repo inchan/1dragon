@@ -21,29 +21,38 @@ export class TypecastTtsAdapter {
 	) {}
 
 	public async synthesize(input: TtsGenerationInput): Promise<TtsGenerationOutput> {
+		if (!this.options.apiKey) {
+			throw new Error('Typecast API key is required')
+		}
+
 		const speed = normalizeSpeed(input.speed)
 		const text = normalizeKoreanNumbers(input.text)
 
-		if (this.options.apiKey) {
-			await fetch(this.options.baseUrl ?? 'https://api.typecast.ai/v1/tts', {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${this.options.apiKey}`,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					text,
-					voice: input.voice,
-					speed,
-				}),
-			}).catch(() => {
-				// 실패 시 시뮬레이션
-			})
+		const response = await fetch(this.options.baseUrl ?? 'https://api.typecast.ai/v1/tts', {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${this.options.apiKey}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				text,
+				voice: input.voice,
+				speed,
+			}),
+		})
+
+		if (!response.ok) {
+			const errorText = await response.text()
+			throw new Error(
+				`Typecast API error: ${response.status} ${response.statusText} - ${errorText}`,
+			)
 		}
+
+		const result = (await response.json()) as { audioUrl?: string }
 
 		return {
 			provider: 'TYPECAST',
-			audioUrl: `https://cdn.snapvid.ai/tts/typecast/${Date.now()}.wav`,
+			audioUrl: result.audioUrl ?? '',
 			durationSec: Math.max(2, Math.round(text.length / (8 * speed))),
 			voice: input.voice,
 			speed,

@@ -42,6 +42,17 @@ const envSchema = z.object({
 
 	// Logging
 	LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+
+	// AI Provider API Keys (optional — feature disabled when missing)
+	GEMINI_VEO_API_KEY: z.string().optional(),
+	GEMINI_IMAGEN_API_KEY: z.string().optional(),
+	RUNWAY_API_KEY: z.string().optional(),
+	HAILUO_API_KEY: z.string().optional(),
+	MINIMAX_API_KEY: z.string().optional(),
+	ELEVENLABS_API_KEY: z.string().optional(),
+
+	// Web App URL (for OAuth redirect URIs)
+	WEB_URL: z.string().url().optional(),
 })
 
 function loadEnv(): z.infer<typeof envSchema> {

@@ -7,8 +7,30 @@ describe('UdioBgmAdapter', () => {
 		vi.clearAllMocks()
 	})
 
-	it('generates starter udio track matched to mood and style', async () => {
+	it('throws when api key is missing', async () => {
 		const adapter = new UdioBgmAdapter()
+		await expect(
+			adapter.generate({
+				mood: 'ENERGETIC',
+				style: 'DYNAMIC',
+				durationSec: 30,
+			}),
+		).rejects.toThrow('Udio API key is required')
+	})
+
+	it('generates udio track from api response', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({
+				id: 'udio_123',
+				title: 'Energetic Dynamic',
+				bpm: 130,
+				url: 'https://cdn.test/bgm.mp3',
+			}),
+		})
+		vi.stubGlobal('fetch', fetchMock)
+
+		const adapter = new UdioBgmAdapter({ apiKey: 'udio-key' })
 		const track = await adapter.generate({
 			mood: 'ENERGETIC',
 			style: 'DYNAMIC',
@@ -17,21 +39,27 @@ describe('UdioBgmAdapter', () => {
 
 		expect(track.source).toBe('UDIO')
 		expect(track.tier).toBe('STARTER')
-		expect(track.bpm).toBeGreaterThanOrEqual(120)
-		expect(track.title).toContain('ENERGETIC')
+		expect(track.bpm).toBe(130)
+		expect(track.url).toBe('https://cdn.test/bgm.mp3')
+		expect(fetchMock).toHaveBeenCalledTimes(1)
 	})
 
-	it('calls udio api when api key exists', async () => {
-		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+	it('throws on api failure', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: false,
+			status: 429,
+			statusText: 'Too Many Requests',
+			text: async () => 'rate limited',
+		})
 		vi.stubGlobal('fetch', fetchMock)
 
 		const adapter = new UdioBgmAdapter({ apiKey: 'udio-key' })
-		await adapter.generate({
-			mood: 'CALM',
-			style: 'SIMPLE',
-			durationSec: 20,
-		})
-
-		expect(fetchMock).toHaveBeenCalledTimes(1)
+		await expect(
+			adapter.generate({
+				mood: 'CALM',
+				style: 'SIMPLE',
+				durationSec: 20,
+			}),
+		).rejects.toThrow('Udio API error: 429')
 	})
 })

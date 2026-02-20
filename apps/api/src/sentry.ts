@@ -12,3 +12,7 @@ export function initSentry(): void {
 		tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 	})
 }
+
+export function captureException(error: unknown): void {
+	Sentry.captureException(error)
+}

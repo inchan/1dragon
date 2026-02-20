@@ -11,6 +11,8 @@ import {
 	type ProductAnalysisResponse,
 } from '@snapvid/shared'
 import { logger } from '@/infrastructure/logging/index.js'
+import { config } from '@/shared/config.js'
+import { safeErrorMessage } from '@/shared/error-utils.js'
 import { AnalyzeImageUseCase } from '@/application/product/analyze-image.usecase.js'
 import { ClaudeVisionAdapter } from '@/infrastructure/providers/vision/claude.adapter.js'
 import { GeminiVisionAdapter } from '@/infrastructure/providers/vision/gemini.adapter.js'
@@ -318,12 +320,13 @@ export function createProductsRouter(): Hono {
 				200,
 			)
 		} catch (error) {
+			logger.error({ userId: user.id, error }, 'Product analysis failed')
 			return c.json(
 				{
 					success: false,
 					error: {
 						code: ErrorCode.INTERNAL,
-						message: error instanceof Error ? error.message : 'Image analysis failed',
+						message: safeErrorMessage(error, config.NODE_ENV),
 					},
 				},
 				500,

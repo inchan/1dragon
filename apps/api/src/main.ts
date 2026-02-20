@@ -1,4 +1,4 @@
-import { initSentry } from './sentry.js'
+import { captureException, initSentry } from './sentry.js'
 
 initSentry()
 
@@ -42,8 +42,8 @@ app.use(
 		origin:
 			config.NODE_ENV === 'development'
 				? ['http://localhost:5173', 'http://localhost:3000']
-				: process.env.WEB_URL
-					? [process.env.WEB_URL]
+				: config.WEB_URL
+					? [config.WEB_URL]
 					: [],
 		allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 		allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
@@ -95,11 +95,8 @@ app.route('/api/v1/products', createProductsRouter())
 app.onError((err, c) => {
 	logger.error({ error: err.message, stack: err.stack }, 'Unhandled error')
 
-	// Send to Sentry in production
 	if (config.NODE_ENV === 'production') {
-		import('./sentry.js').then(() => {
-			logger.error('Error captured by Sentry')
-		})
+		captureException(err)
 	}
 
 	return c.json(

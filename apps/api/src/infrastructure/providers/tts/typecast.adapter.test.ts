@@ -7,8 +7,25 @@ describe('TypecastTtsAdapter', () => {
 		vi.clearAllMocks()
 	})
 
-	it('normalizes speed into 0.8~1.5 range', async () => {
+	it('throws when api key is missing', async () => {
 		const adapter = new TypecastTtsAdapter()
+		await expect(
+			adapter.synthesize({
+				text: '테스트 문장',
+				voice: 'FEMALE_BRIGHT',
+				speed: 1,
+			}),
+		).rejects.toThrow('Typecast API key is required')
+	})
+
+	it('normalizes speed into 0.8~1.5 range', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ audioUrl: 'https://cdn.test/slow.wav' }),
+		})
+		vi.stubGlobal('fetch', fetchMock)
+
+		const adapter = new TypecastTtsAdapter({ apiKey: 'test-key' })
 		const slow = await adapter.synthesize({
 			text: '테스트 문장',
 			voice: 'FEMALE_BRIGHT',
@@ -25,7 +42,10 @@ describe('TypecastTtsAdapter', () => {
 	})
 
 	it('normalizes korean currency text before api call', async () => {
-		const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ audioUrl: 'https://cdn.test/audio.wav' }),
+		})
 		vi.stubGlobal('fetch', fetchMock)
 
 		const adapter = new TypecastTtsAdapter({ apiKey: 'typecast-key' })
@@ -41,5 +61,24 @@ describe('TypecastTtsAdapter', () => {
 		}
 		expect(payload.text).toContain('만 오천 원')
 		expect(payload.speed).toBe(1)
+	})
+
+	it('throws on api failure', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: false,
+			status: 500,
+			statusText: 'Internal Server Error',
+			text: async () => 'server error',
+		})
+		vi.stubGlobal('fetch', fetchMock)
+
+		const adapter = new TypecastTtsAdapter({ apiKey: 'typecast-key' })
+		await expect(
+			adapter.synthesize({
+				text: '테스트',
+				voice: 'FEMALE_BRIGHT',
+				speed: 1,
+			}),
+		).rejects.toThrow('Typecast API error: 500')
 	})
 })

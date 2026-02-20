@@ -3,6 +3,7 @@ import { PlanTier } from '@snapvid/shared'
 import { Worker, type Job } from 'bullmq'
 import { eq } from 'drizzle-orm'
 import { NotificationEvent } from '@/domain/notification/entities.js'
+import { config } from '@/shared/config.js'
 import { db } from '@/infrastructure/persistence/db.js'
 import { videoJobs } from '@/infrastructure/persistence/schema.js'
 import { GenerateVideoUseCase } from '@/application/media/generate-video.usecase.js'
@@ -143,16 +144,16 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 	const repository = new VideoJobRepositoryImpl()
 	const router = new ProviderRouter({
 		RUNWAY: new RunwayI2VAdapter({
-			...(process.env.RUNWAY_API_KEY ? { apiKey: process.env.RUNWAY_API_KEY } : {}),
+			...(config.RUNWAY_API_KEY ? { apiKey: config.RUNWAY_API_KEY } : {}),
 		}),
 		HAILUO: new HailuoI2VAdapter({
-			...(process.env.HAILUO_API_KEY ? { apiKey: process.env.HAILUO_API_KEY } : {}),
+			...(config.HAILUO_API_KEY ? { apiKey: config.HAILUO_API_KEY } : {}),
 		}),
 		GEMINI_VEO: new GeminiVeoI2VAdapter({
-			...(process.env.GEMINI_VEO_API_KEY ? { apiKey: process.env.GEMINI_VEO_API_KEY } : {}),
+			...(config.GEMINI_VEO_API_KEY ? { apiKey: config.GEMINI_VEO_API_KEY } : {}),
 		}),
 		MINIMAX: new MiniMaxI2VAdapter({
-			...(process.env.MINIMAX_API_KEY ? { apiKey: process.env.MINIMAX_API_KEY } : {}),
+			...(config.MINIMAX_API_KEY ? { apiKey: config.MINIMAX_API_KEY } : {}),
 		}),
 	})
 	const useCase = new GenerateVideoUseCase(

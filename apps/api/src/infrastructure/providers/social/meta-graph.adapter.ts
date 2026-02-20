@@ -41,18 +41,17 @@ export class MetaGraphAdapter {
 
 	public async exchangeCodeForToken(code: string): Promise<SocialAccessToken> {
 		if (this.options.appId && this.options.appSecret) {
-			const params = new URLSearchParams({
-				client_id: this.options.appId,
-				client_secret: this.options.appSecret,
-				code,
-				grant_type: 'authorization_code',
-			})
-
 			const response = await fetch(
-				`${this.options.baseUrl ?? 'https://graph.facebook.com/v20.0/oauth/access_token'}?${params.toString()}`,
+				this.options.baseUrl ?? 'https://graph.facebook.com/v20.0/oauth/access_token',
 				{
-					method: 'GET',
-					headers: { 'Content-Type': 'application/json' },
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: new URLSearchParams({
+						client_id: this.options.appId,
+						client_secret: this.options.appSecret,
+						code,
+						grant_type: 'authorization_code',
+					}).toString(),
 				},
 			)
 
@@ -84,10 +83,6 @@ export class MetaGraphAdapter {
 	public async uploadVideo(input: SocialVideoShareInput): Promise<SocialVideoShareOutput> {
 		const hashtags = input.hashtags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`))
 		const finalCaption = [input.caption, hashtags.join(' ')].filter(Boolean).join('\n')
-
-		if (finalCaption.includes('#force_fail')) {
-			throw new Error('Simulated Instagram upload failure')
-		}
 
 		if (this.options.appId && this.options.appSecret) {
 			const response = await fetch(

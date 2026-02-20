@@ -29,9 +29,17 @@ export async function verifyOAuthState(
 		return { valid: false, reason: 'NOT_FOUND' }
 	}
 
-	const [stateUserId] = state.split(':')
+	// 콜론 구분자 안전 파싱 (noUncheckedIndexedAccess 대응)
+	const colonIndex = state.indexOf(':')
+	if (colonIndex === -1) {
+		await redis.del(`oauth:state:${state}`)
+		return { valid: false, reason: 'NOT_FOUND' }
+	}
+	const stateUserId = state.slice(0, colonIndex)
+
 	if (stateUserId !== currentUserId) {
-		// userId 불일치: state를 유지하여 합법적 사용자가 재시도 가능하도록 함
+		// userId 불일치 시에도 state 삭제 (재사용 공격 방지)
+		await redis.del(`oauth:state:${state}`)
 		return { valid: false, reason: 'USER_MISMATCH' }
 	}
 

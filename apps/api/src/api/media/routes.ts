@@ -806,16 +806,11 @@ export function createMediaRouter(): Hono {
 
 		const tiktokStateResult = await verifyOAuthState(redisConnection, parsed.data.state, user.id)
 		if (!tiktokStateResult.valid) {
+			logger.warn({ reason: tiktokStateResult.reason, userId: user.id }, 'TikTok OAuth state verification failed')
 			return c.json(
 				{
 					success: false,
-					error: {
-						code: 'INVALID_STATE',
-						message:
-							tiktokStateResult.reason === 'NOT_FOUND'
-								? 'Invalid or expired OAuth state'
-								: 'State user mismatch',
-					},
+					error: { code: 'INVALID_STATE', message: 'Invalid or expired OAuth state' },
 				},
 				400,
 			)
@@ -858,16 +853,11 @@ export function createMediaRouter(): Hono {
 
 		const instagramStateResult = await verifyOAuthState(redisConnection, parsed.data.state, user.id)
 		if (!instagramStateResult.valid) {
+			logger.warn({ reason: instagramStateResult.reason, userId: user.id }, 'Instagram OAuth state verification failed')
 			return c.json(
 				{
 					success: false,
-					error: {
-						code: 'INVALID_STATE',
-						message:
-							instagramStateResult.reason === 'NOT_FOUND'
-								? 'Invalid or expired OAuth state'
-								: 'State user mismatch',
-					},
+					error: { code: 'INVALID_STATE', message: 'Invalid or expired OAuth state' },
 				},
 				400,
 			)

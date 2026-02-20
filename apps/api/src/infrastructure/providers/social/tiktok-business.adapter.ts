@@ -84,10 +84,6 @@ export class TikTokBusinessAdapter {
 		const hashtags = input.hashtags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`))
 		const finalCaption = [input.caption, hashtags.join(' ')].filter(Boolean).join('\n')
 
-		if (finalCaption.includes('#force_fail')) {
-			throw new Error('Simulated TikTok upload failure')
-		}
-
 		if (this.options.clientKey && this.options.clientSecret) {
 			const response = await fetch(
 				this.options.baseUrl ?? 'https://business-api.tiktok.com/open_api/v1.3/video/upload/',

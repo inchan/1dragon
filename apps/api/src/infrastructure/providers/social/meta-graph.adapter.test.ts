@@ -50,7 +50,7 @@ describe('MetaGraphAdapter', () => {
 			vi.unstubAllGlobals()
 		})
 
-		it('토큰 교환 성공 시 실제 access_token을 반환한다', async () => {
+		it('토큰 교환 성공 시 POST body로 전송하고 실제 access_token을 반환한다', async () => {
 			fetchMock.mockResolvedValueOnce({
 				ok: true,
 				json: async () => ({ access_token: 'real_ig_token_abc', expires_in: 5183944 }),
@@ -59,6 +59,14 @@ describe('MetaGraphAdapter', () => {
 
 			const adapter = new MetaGraphAdapter({ appId: 'app-id', appSecret: 'app-secret' })
 			const token = await adapter.exchangeCodeForToken('code-ig')
+
+			expect(fetchMock).toHaveBeenCalledOnce()
+			const [calledUrl, calledOptions] = fetchMock.mock.calls[0] as [string, RequestInit]
+			// client_secret이 URL에 노출되지 않음을 검증 (POST body로 전송)
+			expect(calledUrl).not.toContain('client_secret')
+			expect(calledOptions.method).toBe('POST')
+			expect(calledOptions.headers).toEqual({ 'Content-Type': 'application/x-www-form-urlencoded' })
+			expect(calledOptions.body).toContain('client_secret=app-secret')
 
 			expect(token.accessToken).toBe('real_ig_token_abc')
 			expect(token.expiresInSec).toBe(5183944)

@@ -89,7 +89,7 @@ describe('OAuth state CSRF 보호', () => {
 			expect(mockRedis.del).toHaveBeenCalledTimes(1)
 		})
 
-		it('state의 userId가 현재 사용자와 다르면 USER_MISMATCH를 반환하고 state를 삭제하지 않는다', async () => {
+		it('state의 userId가 현재 사용자와 다르면 USER_MISMATCH를 반환하고 state도 삭제한다', async () => {
 			const stateUserId = 'attacker-user'
 			const currentUserId = 'victim-user'
 			const state = `${stateUserId}:abcdef1234567890abcdef1234567890`
@@ -97,12 +97,19 @@ describe('OAuth state CSRF 보호', () => {
 
 			const result = await verifyOAuthState(mockRedis, state, currentUserId)
 
-			expect(result.valid).toBe(false)
-			if (!result.valid) {
-				expect(result.reason).toBe('USER_MISMATCH')
-			}
-			// userId 불일치 시 state를 삭제하면 안 된다 (합법적 사용자가 재시도 가능해야 함)
-			expect(mockRedis.del).not.toHaveBeenCalled()
+			expect(result).toMatchObject({ valid: false, reason: 'USER_MISMATCH' })
+			// userId 불일치 시에도 state 삭제 (재사용 공격 방지)
+			expect(mockRedis.del).toHaveBeenCalledWith(`oauth:state:${state}`)
+		})
+
+		it('콜론이 없는 조작된 state는 NOT_FOUND로 처리하고 삭제한다', async () => {
+			const state = 'malformed-state-no-colon'
+			mockRedis.get.mockResolvedValueOnce('1')
+
+			const result = await verifyOAuthState(mockRedis, state, 'user-123')
+
+			expect(result).toMatchObject({ valid: false, reason: 'NOT_FOUND' })
+			expect(mockRedis.del).toHaveBeenCalledWith(`oauth:state:${state}`)
 		})
 
 		it('만료된 state에서는 DEL을 호출하지 않는다', async () => {

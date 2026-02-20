@@ -407,8 +407,8 @@ export function createMediaRouter(): Hono {
 		state: z.string().min(1),
 	})
 
-	const shareWithRetry = async (
-		uploadFn: () => Promise<unknown>,
+	const shareWithRetry = async <T extends { remoteId: string; shareUrl: string }>(
+		uploadFn: () => Promise<T>,
 		context: {
 			platform: string
 			userId: string
@@ -417,7 +417,7 @@ export function createMediaRouter(): Hono {
 		| {
 				success: true
 				attempts: number
-				output: { remoteId: string; shareUrl: string }
+				output: T
 		  }
 		| { success: false; attempts: number }
 	> => {
@@ -427,7 +427,7 @@ export function createMediaRouter(): Hono {
 				return {
 					success: true,
 					attempts,
-					output: output as { remoteId: string; shareUrl: string },
+					output,
 				}
 			} catch (error) {
 				logger.warn({ platform: context.platform, attempts, userId: context.userId, error }, 'Media share upload attempt failed')

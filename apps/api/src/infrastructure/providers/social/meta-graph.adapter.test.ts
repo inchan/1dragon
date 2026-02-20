@@ -72,17 +72,25 @@ describe('MetaGraphAdapter', () => {
 			expect(token.expiresInSec).toBe(5183944)
 		})
 
-		it('토큰 교환 API 실패 시 에러를 throw한다', async () => {
+		it('토큰 교환 API 실패 시 에러를 throw하고 로깅한다', async () => {
 			fetchMock.mockResolvedValueOnce({
 				ok: false,
 				status: 400,
 				text: async () => 'Bad Request',
 			})
 
+			const { logger } = await import('@/infrastructure/logging/index.js')
+			const loggerError = vi.mocked(logger.error)
+			loggerError.mockClear()
+
 			const adapter = new MetaGraphAdapter({ appId: 'app-id', appSecret: 'app-secret' })
 
 			await expect(adapter.exchangeCodeForToken('bad-code')).rejects.toThrow(
 				'Instagram 토큰 교환에 실패했습니다. (status: 400)',
+			)
+			expect(loggerError).toHaveBeenCalledWith(
+				expect.objectContaining({ status: 400 }),
+				'Meta token exchange failed',
 			)
 		})
 
@@ -105,12 +113,16 @@ describe('MetaGraphAdapter', () => {
 			expect(result.shareUrl).toContain('reel_real_456')
 		})
 
-		it('영상 업로드 API 실패 시 에러를 throw한다', async () => {
+		it('영상 업로드 API 실패 시 에러를 throw하고 로깅한다', async () => {
 			fetchMock.mockResolvedValueOnce({
 				ok: false,
 				status: 403,
 				text: async () => 'Forbidden',
 			})
+
+			const { logger } = await import('@/infrastructure/logging/index.js')
+			const loggerError = vi.mocked(logger.error)
+			loggerError.mockClear()
 
 			const adapter = new MetaGraphAdapter({ appId: 'app-id', appSecret: 'app-secret' })
 
@@ -122,6 +134,10 @@ describe('MetaGraphAdapter', () => {
 					hashtags: [],
 				}),
 			).rejects.toThrow('Instagram 영상 업로드에 실패했습니다. (status: 403)')
+			expect(loggerError).toHaveBeenCalledWith(
+				expect.objectContaining({ status: 403 }),
+				'Meta Instagram video upload failed',
+			)
 		})
 	})
 })

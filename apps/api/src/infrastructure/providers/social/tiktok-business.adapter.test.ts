@@ -66,17 +66,25 @@ describe('TikTokBusinessAdapter', () => {
 			expect(token.expiresInSec).toBe(7200)
 		})
 
-		it('토큰 교환 API 실패 시 에러를 throw한다', async () => {
+		it('토큰 교환 API 실패 시 에러를 throw하고 로깅한다', async () => {
 			fetchMock.mockResolvedValueOnce({
 				ok: false,
 				status: 401,
 				text: async () => 'Unauthorized',
 			})
 
+			const { logger } = await import('@/infrastructure/logging/index.js')
+			const loggerError = vi.mocked(logger.error)
+			loggerError.mockClear()
+
 			const adapter = new TikTokBusinessAdapter({ clientKey: 'key', clientSecret: 'secret' })
 
 			await expect(adapter.exchangeCodeForToken('bad-code')).rejects.toThrow(
 				'TikTok 토큰 교환에 실패했습니다. (status: 401)',
+			)
+			expect(loggerError).toHaveBeenCalledWith(
+				expect.objectContaining({ status: 401 }),
+				'TikTok token exchange failed',
 			)
 		})
 
@@ -99,12 +107,16 @@ describe('TikTokBusinessAdapter', () => {
 			expect(result.shareUrl).toContain('vid_real_789')
 		})
 
-		it('영상 업로드 API 실패 시 에러를 throw한다', async () => {
+		it('영상 업로드 API 실패 시 에러를 throw하고 로깅한다', async () => {
 			fetchMock.mockResolvedValueOnce({
 				ok: false,
 				status: 429,
 				text: async () => 'Rate limit',
 			})
+
+			const { logger } = await import('@/infrastructure/logging/index.js')
+			const loggerError = vi.mocked(logger.error)
+			loggerError.mockClear()
 
 			const adapter = new TikTokBusinessAdapter({ clientKey: 'key', clientSecret: 'secret' })
 
@@ -116,6 +128,10 @@ describe('TikTokBusinessAdapter', () => {
 					hashtags: [],
 				}),
 			).rejects.toThrow('TikTok 영상 업로드에 실패했습니다. (status: 429)')
+			expect(loggerError).toHaveBeenCalledWith(
+				expect.objectContaining({ status: 429 }),
+				'TikTok video upload failed',
+			)
 		})
 	})
 })

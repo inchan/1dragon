@@ -1,5 +1,5 @@
 import { and, count, desc, eq } from 'drizzle-orm'
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { ErrorCode, PlanTier, productCategorySchema } from '@snapvid/shared'
@@ -16,6 +16,8 @@ import {
 	type MediaGenerateJobData,
 } from '@/infrastructure/queue/bullmq.config.js'
 import { VideoJobRepositoryImpl, VideoVariantRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
+import { redisConnection } from '@/infrastructure/queue/bullmq.config.js'
+import { RedisSocialTokenRepository } from '@/infrastructure/social/redis-social-token.repository.js'
 import { MetaGraphAdapter, TikTokBusinessAdapter } from '@/infrastructure/providers/social/index.js'
 import { config } from '@/shared/config.js'
 import { GeminiModelCompositeAdapter } from '@/infrastructure/providers/image-gen/gemini-model-composite.adapter.js'
@@ -23,6 +25,7 @@ import { GenerateModelImageUseCase } from '@/application/model-persona/generate-
 import { ModelPersonaSelectionRepositoryImpl } from '@/infrastructure/persistence/repositories/model-persona-selection.repository.js'
 
 const MAX_RETRY_COUNT = 2
+const OAUTH_STATE_TTL_SECONDS = 600 // 10분
 const CREATE_JOB_DEFAULT_DURATION = 15
 const JOB_POLL_RETRY_INTERVAL_MS = 5_000
 
@@ -379,8 +382,7 @@ export function createMediaRouter(): Hono {
 		...(config.META_APP_ID ? { appId: config.META_APP_ID } : {}),
 		...(config.META_APP_SECRET ? { appSecret: config.META_APP_SECRET } : {}),
 	})
-	const tiktokConnections = new Map<string, string>()
-	const instagramConnections = new Map<string, string>()
+	const socialTokenRepository = new RedisSocialTokenRepository(redisConnection)
 	const jobRepository = new VideoJobRepositoryImpl()
 	const variantRepository = new VideoVariantRepositoryImpl()
 
@@ -402,6 +404,7 @@ export function createMediaRouter(): Hono {
 
 	const connectPayloadSchema = z.object({
 		code: z.string().min(1),
+		state: z.string().min(1),
 	})
 
 	const shareWithRetry = async (
@@ -741,13 +744,15 @@ export function createMediaRouter(): Hono {
 		})
 	})
 
-	app.get('/shares/tiktok/connect-url', (c) => {
+	app.get('/shares/tiktok/connect-url', async (c) => {
 		const user = c.get('user')
 		if (!user) {
 			return c.json(UNAUTHORIZED_RESPONSE, 401)
 		}
 
-		const state = `${user.id}:${Date.now()}`
+		const nonce = randomBytes(16).toString('hex')
+		const state = `${user.id}:${nonce}`
+		await redisConnection.set(`oauth:state:${state}`, '1', 'EX', OAUTH_STATE_TTL_SECONDS)
 		return c.json({
 			success: true,
 			data: {
@@ -759,13 +764,15 @@ export function createMediaRouter(): Hono {
 		})
 	})
 
-	app.get('/shares/instagram/connect-url', (c) => {
+	app.get('/shares/instagram/connect-url', async (c) => {
 		const user = c.get('user')
 		if (!user) {
 			return c.json(UNAUTHORIZED_RESPONSE, 401)
 		}
 
-		const state = `${user.id}:${Date.now()}`
+		const nonce = randomBytes(16).toString('hex')
+		const state = `${user.id}:${nonce}`
+		await redisConnection.set(`oauth:state:${state}`, '1', 'EX', OAUTH_STATE_TTL_SECONDS)
 		return c.json({
 			success: true,
 			data: {
@@ -799,8 +806,30 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
+		const storedTiktokState = await redisConnection.get(`oauth:state:${parsed.data.state}`)
+		if (!storedTiktokState) {
+			return c.json(
+				{
+					success: false,
+					error: { code: 'INVALID_STATE', message: 'Invalid or expired OAuth state' },
+				},
+				400,
+			)
+		}
+		await redisConnection.del(`oauth:state:${parsed.data.state}`)
+		const [tiktokStateUserId] = parsed.data.state.split(':')
+		if (tiktokStateUserId !== user.id) {
+			return c.json(
+				{
+					success: false,
+					error: { code: 'INVALID_STATE', message: 'State user mismatch' },
+				},
+				400,
+			)
+		}
+
 		const token = await tiktokAdapter.exchangeCodeForToken(parsed.data.code)
-		tiktokConnections.set(user.id, token.accessToken)
+		await socialTokenRepository.set('tiktok', user.id, token.accessToken)
 
 		return c.json({
 			success: true,
@@ -834,8 +863,30 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
+		const storedInstagramState = await redisConnection.get(`oauth:state:${parsed.data.state}`)
+		if (!storedInstagramState) {
+			return c.json(
+				{
+					success: false,
+					error: { code: 'INVALID_STATE', message: 'Invalid or expired OAuth state' },
+				},
+				400,
+			)
+		}
+		await redisConnection.del(`oauth:state:${parsed.data.state}`)
+		const [instagramStateUserId] = parsed.data.state.split(':')
+		if (instagramStateUserId !== user.id) {
+			return c.json(
+				{
+					success: false,
+					error: { code: 'INVALID_STATE', message: 'State user mismatch' },
+				},
+				400,
+			)
+		}
+
 		const token = await metaAdapter.exchangeCodeForToken(parsed.data.code)
-		instagramConnections.set(user.id, token.accessToken)
+		await socialTokenRepository.set('instagram', user.id, token.accessToken)
 
 		return c.json({
 			success: true,
@@ -869,7 +920,7 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
-		const token = tiktokConnections.get(user.id)
+		const token = await socialTokenRepository.get('tiktok', user.id)
 		if (!token) {
 			return c.json(
 				{
@@ -941,7 +992,7 @@ export function createMediaRouter(): Hono {
 			)
 		}
 
-		const token = instagramConnections.get(user.id)
+		const token = await socialTokenRepository.get('instagram', user.id)
 		if (!token) {
 			return c.json(
 				{

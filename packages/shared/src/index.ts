@@ -28,6 +28,12 @@ export {
 	ageRangeSchema,
 	SubtitleStyle,
 	subtitleStyleSchema,
+	ContentFormat,
+	contentFormatSchema,
+	HookPattern,
+	hookPatternSchema,
+	SlideRole,
+	slideRoleSchema,
 } from './enums'
 
 // ── Utils ─────────────────────────────────────

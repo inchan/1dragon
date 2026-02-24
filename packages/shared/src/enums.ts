@@ -117,3 +117,38 @@ export const SubtitleStyle = {
 
 export type SubtitleStyle = (typeof SubtitleStyle)[keyof typeof SubtitleStyle]
 export const subtitleStyleSchema = z.nativeEnum(SubtitleStyle)
+
+// ── ContentFormat ────────────────────────────
+export const ContentFormat = {
+	SLIDESHOW: 'SLIDESHOW',
+	VIDEO: 'VIDEO',
+} as const
+
+export type ContentFormat = (typeof ContentFormat)[keyof typeof ContentFormat]
+export const contentFormatSchema = z.nativeEnum(ContentFormat)
+
+// ── HookPattern ──────────────────────────────
+export const HookPattern = {
+	CONFLICT_RESOLUTION: 'CONFLICT_RESOLUTION',
+	BEFORE_AFTER: 'BEFORE_AFTER',
+	SOCIAL_PROOF: 'SOCIAL_PROOF',
+	CURIOSITY_GAP: 'CURIOSITY_GAP',
+	CHALLENGE: 'CHALLENGE',
+	STORYTELLING: 'STORYTELLING',
+} as const
+
+export type HookPattern = (typeof HookPattern)[keyof typeof HookPattern]
+export const hookPatternSchema = z.nativeEnum(HookPattern)
+
+// ── SlideRole ────────────────────────────────
+export const SlideRole = {
+	HOOK: 'HOOK',
+	PROBLEM: 'PROBLEM',
+	DISCOVERY: 'DISCOVERY',
+	TRANSFORMATION_1: 'TRANSFORMATION_1',
+	TRANSFORMATION_2: 'TRANSFORMATION_2',
+	CTA: 'CTA',
+} as const
+
+export type SlideRole = (typeof SlideRole)[keyof typeof SlideRole]
+export const slideRoleSchema = z.nativeEnum(SlideRole)

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../../lib/api'
-import type { UpdateProfileRequest, UserProfile } from '@snapvid/shared'
+import type { UpdateProfileRequest, UserProfile } from '@1dragon/shared'
 
 const PROFILE_QUERY_KEY = ['profile'] as const
 

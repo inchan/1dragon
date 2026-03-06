@@ -9,7 +9,7 @@ import {
 	StylePreset,
 	analyzeProductRequestSchema,
 	type ProductAnalysisResponse,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 import { logger } from '@/infrastructure/logging/index.js'
 import { config } from '@/shared/config.js'
 import { safeErrorMessage } from '@/shared/error-utils.js'

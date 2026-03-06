@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Label, Select } from '@snapvid/ui'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Label, Select } from '@1dragon/ui'
 import type { JSX } from 'react'
 import type {
 	ModelPersonaAgeRange,

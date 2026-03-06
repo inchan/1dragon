@@ -6,7 +6,7 @@ import {
 	DELETION_GRACE_PERIOD_MS,
 } from './controller.js'
 import { db } from '../../infrastructure/persistence/db.js'
-import { isOk, isErr } from '@snapvid/shared'
+import { isOk, isErr } from '@1dragon/shared'
 
 // Mock the database
 vi.mock('../../infrastructure/persistence/db.js', () => ({

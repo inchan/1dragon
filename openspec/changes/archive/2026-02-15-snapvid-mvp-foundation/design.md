@@ -1,6 +1,6 @@
 ## Context
 
-SnapVid MVP는 "상품 사진 1장 → 숏폼 마케팅 영상 자동 생성" AI SaaS다. 현재 기획 문서만 존재하고 구현 코드는 없다. 기존 아키텍처 문서(Python/FastAPI + Next.js)에서 **TypeScript 풀스택 모노레포**로 전환하며, I2V 4-provider 체계와 AI 모델 페르소나 기능을 MVP P0으로 포함한다.
+1Dragon MVP는 "상품 사진 1장 → 숏폼 마케팅 영상 자동 생성" AI SaaS다. 현재 기획 문서만 존재하고 구현 코드는 없다. 기존 아키텍처 문서(Python/FastAPI + Next.js)에서 **TypeScript 풀스택 모노레포**로 전환하며, I2V 4-provider 체계와 AI 모델 페르소나 기능을 MVP P0으로 포함한다.
 
 **현재 상태:** 코드 없음. docs/ 디렉토리에 리서치, 전략, PRD, 아키텍처 문서만 존재.
 
@@ -107,7 +107,7 @@ SnapVid MVP는 "상품 사진 1장 → 숏폼 마케팅 영상 자동 생성" AI
 **결정:**
 
 ```
-snapvid/
+1dragon/
 ├── apps/
 │   ├── web/                     # React 19 + Vite + TanStack Router (프론트엔드)
 │   └── api/                     # Hono (백엔드)

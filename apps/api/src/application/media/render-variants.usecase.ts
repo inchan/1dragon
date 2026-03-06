@@ -1,4 +1,4 @@
-import type { PlanTier as PlanTierType } from '@snapvid/shared'
+import type { PlanTier as PlanTierType } from '@1dragon/shared'
 import { VideoAsset, VideoVariant } from '@/domain/media/entities.js'
 import type { ComposerPort } from '@/domain/media/ports.js'
 import { VariantPolicyService } from '@/domain/media/services.js'

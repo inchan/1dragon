@@ -2,11 +2,11 @@ import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { requireAuth } from '../../infrastructure/auth/hono-handler.js'
 import { scheduleAccountDeletion, cancelAccountDeletion } from './controller.js'
-import { isOk, isErr, ErrorCode } from '@snapvid/shared'
+import { isOk, isErr, ErrorCode } from '@1dragon/shared'
 import { logger } from '../../infrastructure/logging/index.js'
 import { db } from '../../infrastructure/persistence/db.js'
 import { users } from '../../infrastructure/persistence/schema.js'
-import { updateProfileRequestSchema, onboardingRequestSchema } from '@snapvid/shared'
+import { updateProfileRequestSchema, onboardingRequestSchema } from '@1dragon/shared'
 
 /**
  * Users API 라우터

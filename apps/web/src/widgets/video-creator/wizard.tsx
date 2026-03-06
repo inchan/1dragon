@@ -30,7 +30,7 @@ import {
 	ProductCategory,
 	type ProductCategory as ProductCategoryType,
 	type StylePreset,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 import {
 	Button,
 	Card,
@@ -41,7 +41,7 @@ import {
 	Input,
 	Label,
 	Select,
-} from '@snapvid/ui'
+} from '@1dragon/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { type JSX, useCallback, useEffect, useMemo, useReducer } from 'react'

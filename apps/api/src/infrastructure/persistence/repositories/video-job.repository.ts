@@ -1,5 +1,5 @@
 import { and, count, desc, eq } from 'drizzle-orm'
-import { Platform } from '@snapvid/shared'
+import { Platform } from '@1dragon/shared'
 import type {
 	VideoJobCreateInput,
 	VideoJobRecord,

@@ -116,7 +116,7 @@ export class TikTokBusinessAdapter {
 			return {
 				platform: 'TIKTOK',
 				remoteId: videoId,
-				shareUrl: `https://www.tiktok.com/@snapvid/video/${videoId}`,
+				shareUrl: `https://www.tiktok.com/@1dragon/video/${videoId}`,
 			}
 		}
 
@@ -125,7 +125,7 @@ export class TikTokBusinessAdapter {
 		return {
 			platform: 'TIKTOK',
 			remoteId,
-			shareUrl: `https://www.tiktok.com/@snapvid/video/${remoteId}`,
+			shareUrl: `https://www.tiktok.com/@1dragon/video/${remoteId}`,
 		}
 	}
 }

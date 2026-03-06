@@ -1,7 +1,7 @@
 # content-generation Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Marketing copy auto-generation
 The system SHALL generate Korean marketing copy using GPT-4o API. Input MUST include product_name, image analysis results (category, keywords, mood), and selected style. Output MUST include 3 variant copy sets, each containing: hook_copy (1~3 second hook), body_copy (2~3 sentences product description), cta_copy (call-to-action), hashtags (5 recommended hashtags).

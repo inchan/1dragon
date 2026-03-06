@@ -1,4 +1,4 @@
-import { SlideRole } from '@snapvid/shared'
+import { SlideRole } from '@1dragon/shared'
 import type { HookFormula } from './entities.js'
 
 const STANDARD_ROLE_SEQUENCE: readonly string[] = [

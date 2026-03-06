@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
-import { createVideoJobRequestSchema, productCategorySchema } from '@snapvid/shared'
+import { createVideoJobRequestSchema, productCategorySchema } from '@1dragon/shared'
 import { logger } from '@/infrastructure/logging/index.js'
 import { sseBroker } from '@/infrastructure/notification/sse-broker.js'
 

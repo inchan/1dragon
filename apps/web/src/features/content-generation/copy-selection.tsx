@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@snapvid/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@1dragon/ui'
 import type { JSX } from 'react'
 import type { MarketingCopyVariant } from './types'
 

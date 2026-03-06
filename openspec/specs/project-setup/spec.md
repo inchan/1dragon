@@ -1,7 +1,7 @@
 # project-setup Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Monorepo structure with Turbo and pnpm
 The system SHALL use a Turbo + pnpm workspace monorepo with the following packages: `apps/web` (React 19 frontend), `apps/api` (Hono backend), `packages/shared` (shared types/Zod schemas), `packages/ui` (shared UI components), `packages/config` (shared lint/build config). Node.js ≥20.0.0 and pnpm ≥9.15.0 MUST be enforced via `engines` field.
@@ -29,7 +29,7 @@ All packages MUST use TypeScript with `strict: true`, `noUncheckedIndexedAccess:
 
 #### Scenario: Shared tsconfig inheritance
 - **WHEN** a new package is added to the monorepo
-- **THEN** it extends `@snapvid/typescript-config/base.json` and inherits all strict settings
+- **THEN** it extends `@1dragon/typescript-config/base.json` and inherits all strict settings
 
 ---
 

@@ -37,4 +37,48 @@ describe('PromptBuilder', () => {
 			expect(prompt).toContain('no freeze frame')
 		}
 	})
+
+	it('injects influencer-style timeline and UGC realism constraints', async () => {
+		const builder = new PromptBuilder()
+		const output = await builder.build({
+			productCategory: 'ELECTRONICS',
+			moods: ['ENERGETIC'],
+			keywords: ['wireless earbuds', 'noise canceling'],
+			stylePreset: 'DYNAMIC',
+			copy: {
+				hook: '지하철에서도 또렷한 사운드',
+				description: '원터치 연결 + 강력한 노이즈 캔슬링',
+				cta: '오늘만 특가로 만나보세요',
+			},
+		})
+
+		for (const prompt of [output.runway, output.hailuo, output.geminiVeo, output.minimax]) {
+			expect(prompt).toContain('real influencer advertisement')
+			expect(prompt).toContain('Narrative timeline: 0-2s hook, 2-10s demonstration/social proof, 10-15s CTA close.')
+			expect(prompt).toContain('Use authentic UGC language')
+			expect(prompt).toContain('Text overlay rule')
+		}
+	})
+
+	it('injects workflow stages and custom prompt directives when provided', async () => {
+		const builder = new PromptBuilder()
+		const output = await builder.build({
+			productCategory: 'FASHION',
+			moods: ['ENERGETIC'],
+			keywords: ['dress'],
+			stylePreset: 'TRENDY',
+			copy: {
+				hook: '성수 OOTD 시작',
+				description: '체크 원피스 핏체크',
+				cta: '댓글로 A/B 코디를 골라줘',
+			},
+			workflowStages: ['리서치', '기획', '개발', 'QA'],
+			promptDirectives: ['Location direction: Seongsu-dong, Seoul.'],
+		})
+
+		for (const prompt of [output.runway, output.hailuo, output.geminiVeo, output.minimax]) {
+			expect(prompt).toContain('Execution workflow: 리서치 -> 기획 -> 개발 -> QA.')
+			expect(prompt).toContain('Location direction: Seongsu-dong, Seoul.')
+		}
+	})
 })

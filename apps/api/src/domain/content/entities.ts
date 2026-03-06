@@ -3,7 +3,7 @@ import type {
 	Platform,
 	ProductCategory,
 	SlideRole,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 
 const MAX_HASHTAGS = 5
 const MIN_SLIDES = 3

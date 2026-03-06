@@ -1,4 +1,4 @@
-import { PlanTier, SubscriptionStatus } from '@snapvid/shared'
+import { PlanTier, SubscriptionStatus } from '@1dragon/shared'
 import { describe, expect, it } from 'vitest'
 import { Subscription } from '@/domain/payment/entities.js'
 import { ManageSubscriptionUseCase } from './manage-subscription.usecase.js'

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input, Label } from '@snapvid/ui'
+import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input, Label } from '@1dragon/ui'
 import { api } from '@/lib/api'
 import { useCancelSubscription, useQuota, useSubscription } from '@/features/payment/hooks'
 

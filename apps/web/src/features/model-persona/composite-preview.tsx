@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@snapvid/ui'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@1dragon/ui'
 import type { JSX } from 'react'
 
 type CompositePreviewProps = {

@@ -2,7 +2,7 @@ import type {
 	Mood,
 	ProductCategory,
 	StylePreset,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 
 export interface VisionAnalyzerInput {
 	readonly imageUrl: string

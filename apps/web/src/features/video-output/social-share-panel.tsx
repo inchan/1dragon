@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@snapvid/ui'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@1dragon/ui'
 import { useState, type JSX } from 'react'
 import { api } from '@/lib/api'
 import { formatVideoFileName } from './model'

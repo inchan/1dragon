@@ -1,7 +1,7 @@
 # user-management Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Social login authentication
 The system SHALL support social login via Kakao (primary for Korean market), Google, and Apple. Authentication MUST be implemented using Better Auth with Hono integration. No email/password registration in MVP. The system MUST handle same-email across different social providers by linking accounts.

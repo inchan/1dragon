@@ -2,7 +2,7 @@ import type {
 	AgeRange,
 	Gender,
 	ProductCategory,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 import type { BodyType, PersonaStyle } from './entities.js'
 
 export type { BodyType, PersonaStyle } from './entities.js'

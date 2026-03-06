@@ -1,4 +1,4 @@
-import { ProductCategory } from '@snapvid/shared'
+import { ProductCategory } from '@1dragon/shared'
 import { describe, expect, it } from 'vitest'
 import {
 	buildPersonaCatalog,

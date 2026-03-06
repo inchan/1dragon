@@ -4,7 +4,7 @@ import {
 	Gender,
 	type AgeRange as AgeRangeType,
 	type Gender as GenderType,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 import type {
 	BodyType,
 	ModelPersonaPresetRepository,

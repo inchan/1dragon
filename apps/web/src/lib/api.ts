@@ -8,7 +8,7 @@ import type {
 	CreateVideoJobRequest,
 	CreateVideoJobResponse,
 	MediaJobStatusResponse,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -324,6 +324,14 @@ export const api = {
 			productCategory?: string
 			moods?: string[]
 			keywords?: string[]
+			autoShortformWorkflow?: boolean
+			creativeContext?: {
+				location?: string
+				profession?: string
+				identity?: string
+				traits?: string[]
+				visualStyle?: string
+			}
 			copy?: { hook: string; description: string; cta: string }
 		},
 	): Promise<CreateVideoJobResponse & { isDuplicate?: boolean }> =>

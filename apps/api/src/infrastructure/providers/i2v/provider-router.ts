@@ -1,4 +1,5 @@
-import { PlanTier, type PlanTier as PlanTierType } from '@snapvid/shared'
+import { PlanTier, type PlanTier as PlanTierType } from '@1dragon/shared'
+import { MediaReliabilityPolicyService } from '@/domain/media/services.js'
 import type { I2VGenerateInput, I2VGenerateOutput, I2VPort } from '@/domain/media/ports.js'
 import { createChildLogger } from '@/infrastructure/logging/logger.js'
 import { I2VProviderError, type I2VProviderName } from './base-provider.js'
@@ -22,10 +23,14 @@ type CircuitSnapshot = {
 	state: CircuitState
 	consecutiveFailures: number
 	openedAt: number | null
+	halfOpenAttempts: number
+	halfOpenSuccesses: number
 }
 
 const PAID_CHAIN: readonly I2VProviderName[] = ['RUNWAY', 'GEMINI_VEO', 'MINIMAX', 'HAILUO']
 const FREE_CHAIN: readonly I2VProviderName[] = ['HAILUO', 'MINIMAX', 'GEMINI_VEO']
+const reliabilityPolicy = new MediaReliabilityPolicyService()
+const circuitPolicy = reliabilityPolicy.getCircuitBreakerPolicy()
 
 export class AllI2VProvidersFailedError extends Error {
 	public readonly attemptedProviders: I2VProviderName[]
@@ -47,13 +52,15 @@ export class ProviderRouter {
 		private readonly options: {
 			failureThreshold?: number
 			openDurationMs?: number
+			halfOpenMaxCalls?: number
+			halfOpenSuccessThreshold?: number
 		} = {},
 	) {
 		this.circuitBreaker = {
-			RUNWAY: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null },
-			HAILUO: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null },
-			GEMINI_VEO: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null },
-			MINIMAX: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null },
+			RUNWAY: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null, halfOpenAttempts: 0, halfOpenSuccesses: 0 },
+			HAILUO: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null, halfOpenAttempts: 0, halfOpenSuccesses: 0 },
+			GEMINI_VEO: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null, halfOpenAttempts: 0, halfOpenSuccesses: 0 },
+			MINIMAX: { state: 'CLOSED', consecutiveFailures: 0, openedAt: null, halfOpenAttempts: 0, halfOpenSuccesses: 0 },
 		}
 	}
 
@@ -162,11 +169,19 @@ export class ProviderRouter {
 	}
 
 	private get failureThreshold(): number {
-		return this.options.failureThreshold ?? 5
+		return this.options.failureThreshold ?? circuitPolicy.failureThreshold
 	}
 
 	private get openDurationMs(): number {
-		return this.options.openDurationMs ?? 30_000
+		return this.options.openDurationMs ?? circuitPolicy.openDurationMs
+	}
+
+	private get halfOpenMaxCalls(): number {
+		return this.options.halfOpenMaxCalls ?? circuitPolicy.halfOpenMaxCalls
+	}
+
+	private get halfOpenSuccessThreshold(): number {
+		return this.options.halfOpenSuccessThreshold ?? circuitPolicy.successThresholdToClose
 	}
 
 	private canAttempt(provider: I2VProviderName): boolean {
@@ -182,6 +197,8 @@ export class ProviderRouter {
 		const elapsed = Date.now() - circuit.openedAt
 		if (elapsed >= this.openDurationMs) {
 			circuit.state = 'HALF_OPEN'
+			circuit.halfOpenAttempts = 0
+			circuit.halfOpenSuccesses = 0
 			return true
 		}
 
@@ -189,10 +206,50 @@ export class ProviderRouter {
 	}
 
 	private onProviderSuccess(provider: I2VProviderName): void {
+		const circuit = this.circuitBreaker[provider]
+		if (circuit.state === 'HALF_OPEN') {
+			const nextAttempts = circuit.halfOpenAttempts + 1
+			const nextSuccesses = circuit.halfOpenSuccesses + 1
+
+			if (nextSuccesses >= this.halfOpenSuccessThreshold) {
+				this.circuitBreaker[provider] = {
+					state: 'CLOSED',
+					consecutiveFailures: 0,
+					openedAt: null,
+					halfOpenAttempts: 0,
+					halfOpenSuccesses: 0,
+				}
+				return
+			}
+
+			if (nextAttempts >= this.halfOpenMaxCalls) {
+				this.circuitBreaker[provider] = {
+					state: 'OPEN',
+					consecutiveFailures: this.failureThreshold,
+					openedAt: Date.now(),
+					halfOpenAttempts: 0,
+					halfOpenSuccesses: 0,
+				}
+				return
+			}
+
+			this.circuitBreaker[provider] = {
+				...circuit,
+				state: 'HALF_OPEN',
+				consecutiveFailures: 0,
+				openedAt: null,
+				halfOpenAttempts: nextAttempts,
+				halfOpenSuccesses: nextSuccesses,
+			}
+			return
+		}
+
 		this.circuitBreaker[provider] = {
 			state: 'CLOSED',
 			consecutiveFailures: 0,
 			openedAt: null,
+			halfOpenAttempts: 0,
+			halfOpenSuccesses: 0,
 		}
 	}
 
@@ -204,6 +261,8 @@ export class ProviderRouter {
 				state: 'OPEN',
 				consecutiveFailures: this.failureThreshold,
 				openedAt: Date.now(),
+				halfOpenAttempts: 0,
+				halfOpenSuccesses: 0,
 			}
 			return
 		}
@@ -214,6 +273,8 @@ export class ProviderRouter {
 				state: 'OPEN',
 				consecutiveFailures: nextFailures,
 				openedAt: Date.now(),
+				halfOpenAttempts: 0,
+				halfOpenSuccesses: 0,
 			}
 			return
 		}
@@ -222,6 +283,9 @@ export class ProviderRouter {
 			...circuit,
 			state: 'CLOSED',
 			consecutiveFailures: nextFailures,
+			openedAt: null,
+			halfOpenAttempts: 0,
+			halfOpenSuccesses: 0,
 		}
 	}
 }

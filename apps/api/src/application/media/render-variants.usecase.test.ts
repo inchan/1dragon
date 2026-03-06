@@ -1,4 +1,4 @@
-import { PlanTier } from '@snapvid/shared'
+import { PlanTier } from '@1dragon/shared'
 import { describe, expect, it } from 'vitest'
 import type { ComposerPort } from '@/domain/media/ports.js'
 import { RenderVariantsUseCase } from './render-variants.usecase.js'

@@ -1,6 +1,6 @@
-# SnapVid Documentation
+# 1Dragon Documentation
 
-> **SnapVid**: 이커머스 상품 사진을 숏폼 마케팅 영상으로 자동 변환하는 AI 솔루션
+> **1Dragon**: 이커머스 상품 사진을 숏폼 마케팅 영상으로 자동 변환하는 AI 솔루션
 
 ## 📚 Documentation Index
 
@@ -29,6 +29,7 @@
   - [15초 샷리스트 템플릿](03-product/templates/shortform_15s_shotlist.csv)
   - [A/B 테스트 매트릭스 템플릿](03-product/templates/ab_test_matrix.csv)
   - [7일 제작 콜시트 템플릿](03-product/templates/production_callsheet_7day.md)
+- **[인플루언서형 광고 영상 실행 문서](03-product/INFLUENCER_AD_WORKFLOW_EXECUTION.md)**: X 사례 조사 기반 목표/목적 정의, 프롬프트 v2, 실행 로그
 
 ### 4. Simulation (검증 및 시뮬레이션)
 - **[변증법 분석 (Dialectic Analysis)](04-simulation/dialectic-analysis/hub.md)**
@@ -48,6 +49,12 @@
 - **[초기 설계 (Initial Design)](05-architecture/INITIAL_DESIGN.md)**: MVP 기술 스택, 디렉토리 구조, 핵심 인터페이스
 - **[Gap 분석 (Gap Analysis)](05-architecture/GAP_ANALYSIS_REPORT.md)**: PRD vs 설계 정합성 검증
 - **[개정 설계 (Revised Design)](05-architecture/REVISED_DESIGN.md)**: Gap 보완 후 최종 확정 아키텍처 (Week 3 기준)
+
+### 6. Operations (운영/신뢰성)
+- **[구조 진단 및 실행 계획](06-operations/ZODRAGON_STRUCTURE_GAP_PLAN_2026-02-24.md)**: 분야별 상태/갭/P0~P2 실행계획
+- **[P0 신뢰성 포트 계약서](06-operations/P0_RELIABILITY_PORT_CONTRACT.md)**: 재시도·DLQ·서킷·헬스체크 타입 기준
+- **[P0 운영 기준서](06-operations/P0_RELIABILITY_RUNBOOK.md)**: 장애 대응/운영 규칙
+- **[P0 QA 체크리스트](06-operations/P0_RELIABILITY_QA_CHECKLIST.md)**: 회귀 검증 항목
 
 ---
 > **Note**: This documentation structure is designed to support the AI-Driven Development Lifecycle (AI-DLC).

@@ -1,4 +1,4 @@
-import { ProductCategory } from '@snapvid/shared'
+import { ProductCategory } from '@1dragon/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GeminiModelCompositeAdapter } from './gemini-model-composite.adapter.js'
 

@@ -14,7 +14,7 @@
 ## Decisions
 
 ### Decision 1: Error code and details standardization
-`@snapvid/shared`의 `ErrorCode.VALIDATION`을 모든 대상 라우트에서 사용하고, `details.fieldErrors`를 공통 형태로 구성한다.
+`@1dragon/shared`의 `ErrorCode.VALIDATION`을 모든 대상 라우트에서 사용하고, `details.fieldErrors`를 공통 형태로 구성한다.
 
 ### Decision 2: Minimal helper inside each router
 추가 의존성 확장을 피하기 위해 각 라우터에서 단일 헬퍼 함수를 두어 필드 오류 배열로 변환해 응답한다.

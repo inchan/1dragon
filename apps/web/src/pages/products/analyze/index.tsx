@@ -21,8 +21,8 @@ import {
 	Input,
 	Label,
 	Select,
-} from '@snapvid/ui'
-import { ProductCategory, type ProductAnalysisResponse } from '@snapvid/shared'
+} from '@1dragon/ui'
+import { ProductCategory, type ProductAnalysisResponse } from '@1dragon/shared'
 import {
 	CompositePreview,
 	ModelPersonaSelector,

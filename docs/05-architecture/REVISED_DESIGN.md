@@ -1,4 +1,4 @@
-# SnapVid MVP 개정 아키텍처 설계 (REVISED DESIGN)
+# 1Dragon MVP 개정 아키텍처 설계 (REVISED DESIGN)
 
 > 작성일: 2026-02-11  
 > 기준 문서: `docs/05-architecture/INITIAL_DESIGN.md`, `docs/05-architecture/GAP_ANALYSIS_REPORT.md`  

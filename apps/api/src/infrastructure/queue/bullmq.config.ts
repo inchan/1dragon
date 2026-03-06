@@ -1,6 +1,7 @@
 import { Queue, type Job, type QueueOptions } from 'bullmq'
 import IORedis from 'ioredis'
-import type { PlanTier } from '@snapvid/shared'
+import type { PlanTier } from '@1dragon/shared'
+import { MediaReliabilityPolicyService } from '@/domain/media/services.js'
 import { config } from '../../shared/config.js'
 
 // Redis connection singleton
@@ -13,6 +14,7 @@ export const redisConnection = new IORedis(config.REDIS_URL, {
 export const QueueName = {
 	MEDIA_ANALYZE: 'media-analyze',
 	MEDIA_GENERATE: 'media-generate',
+	MEDIA_GENERATE_DLQ: 'media-generate-dlq',
 	MEDIA_COMPOSE: 'media-compose',
 	MEDIA_RENDER_VARIANT: 'media-render-variant',
 	NOTIFICATION_DISPATCH: 'notification-dispatch',
@@ -20,14 +22,18 @@ export const QueueName = {
 
 export type QueueNameType = (typeof QueueName)[keyof typeof QueueName]
 
+const reliabilityPolicy = new MediaReliabilityPolicyService()
+const mediaGenerateRetryPolicy = reliabilityPolicy.getQueueRetryPolicy('MEDIA_GENERATE')
+const mediaGenerateDeadLetterPolicy = reliabilityPolicy.getQueueDeadLetterPolicy('MEDIA_GENERATE')
+
 // Default queue options
 const defaultQueueOptions: QueueOptions = {
 	connection: redisConnection,
 	defaultJobOptions: {
-		attempts: 3,
+		attempts: mediaGenerateRetryPolicy.maxAttempts,
 		backoff: {
-			type: 'exponential',
-			delay: 1000,
+			type: mediaGenerateRetryPolicy.strategy.toLowerCase() as 'exponential',
+			delay: mediaGenerateRetryPolicy.baseDelayMs,
 		},
 		removeOnComplete: {
 			age: 24 * 3600, // 24 hours
@@ -40,10 +46,29 @@ const defaultQueueOptions: QueueOptions = {
 	},
 }
 
+const deadLetterQueueOptions: QueueOptions = {
+	connection: redisConnection,
+	defaultJobOptions: {
+		attempts: 1,
+		removeOnComplete: {
+			age: 24 * 3600,
+			count: 500,
+		},
+		removeOnFail: {
+			age: mediaGenerateDeadLetterPolicy.retainFailedForHours * 3600,
+			count: 10_000,
+		},
+	},
+}
+
 // Queue instances
 export const queues = {
 	[QueueName.MEDIA_ANALYZE]: new Queue(QueueName.MEDIA_ANALYZE, defaultQueueOptions),
 	[QueueName.MEDIA_GENERATE]: new Queue(QueueName.MEDIA_GENERATE, defaultQueueOptions),
+	[QueueName.MEDIA_GENERATE_DLQ]: new Queue(
+		QueueName.MEDIA_GENERATE_DLQ,
+		deadLetterQueueOptions,
+	),
 	[QueueName.MEDIA_COMPOSE]: new Queue(QueueName.MEDIA_COMPOSE, defaultQueueOptions),
 	[QueueName.MEDIA_RENDER_VARIANT]: new Queue(QueueName.MEDIA_RENDER_VARIANT, defaultQueueOptions),
 	[QueueName.NOTIFICATION_DISPATCH]: new Queue(
@@ -63,11 +88,20 @@ export interface MediaGenerateJobData {
 	projectId: string
 	userId: string
 	imageUrl: string
+	personaId?: string
 	retryAttempt?: number
 	idempotencyKey?: string
 	productCategory?: string
 	moods?: string[]
 	keywords?: string[]
+	autoShortformWorkflow?: boolean
+	creativeContext?: {
+		location?: string
+		profession?: string
+		identity?: string
+		traits?: string[]
+		visualStyle?: string
+	}
 	copy?: {
 		hook: string
 		description: string
@@ -79,6 +113,18 @@ export interface MediaGenerateJobData {
 		planTier?: PlanTier
 		isFirstVideo?: boolean
 	}
+}
+
+export interface MediaGenerateDlqJobData {
+	jobId: string
+	userId: string
+	reason: 'MAX_ATTEMPTS_EXCEEDED' | 'NON_RETRYABLE_PROVIDER_ERROR' | 'PROVIDER_CHAIN_EXHAUSTED' | 'UNKNOWN'
+	errorMessage: string
+	attemptsMade: number
+	maxAttempts: number
+	sourceQueue: typeof QueueName.MEDIA_GENERATE
+	failedAt: string
+	metadata?: Record<string, unknown>
 }
 
 export interface MediaComposeJobData {
@@ -110,6 +156,7 @@ export interface NotificationDispatchJobData {
 export type JobDataMap = {
 	[QueueName.MEDIA_ANALYZE]: MediaAnalyzeJobData
 	[QueueName.MEDIA_GENERATE]: MediaGenerateJobData
+	[QueueName.MEDIA_GENERATE_DLQ]: MediaGenerateDlqJobData
 	[QueueName.MEDIA_COMPOSE]: MediaComposeJobData
 	[QueueName.MEDIA_RENDER_VARIANT]: MediaRenderVariantJobData
 	[QueueName.NOTIFICATION_DISPATCH]: NotificationDispatchJobData

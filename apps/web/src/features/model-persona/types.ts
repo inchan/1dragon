@@ -1,4 +1,4 @@
-import type { ProductCategory, Gender } from '@snapvid/shared'
+import type { ProductCategory, Gender } from '@1dragon/shared'
 
 export const MODEL_PERSONA_AGE_RANGES = ['YOUNG_ADULT', 'ADULT', 'MIDDLE_AGED'] as const
 export type ModelPersonaAgeRange = (typeof MODEL_PERSONA_AGE_RANGES)[number]

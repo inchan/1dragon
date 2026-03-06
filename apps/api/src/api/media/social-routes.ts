@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { ErrorCode } from '@snapvid/shared'
+import { ErrorCode } from '@1dragon/shared'
 import { logger } from '@/infrastructure/logging/index.js'
 import { redisConnection } from '@/infrastructure/queue/bullmq.config.js'
 import { config } from '@/shared/config.js'

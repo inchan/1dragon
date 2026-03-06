@@ -1,4 +1,4 @@
-import { PlanTier, type PlanTier as PlanTierType } from '@snapvid/shared'
+import { PlanTier, type PlanTier as PlanTierType } from '@1dragon/shared'
 import {
 	ClipAsset,
 	StylePresetVO,
@@ -114,6 +114,8 @@ export type GenerateVideoInput = {
 		readonly description: string
 		readonly cta: string
 	}
+	readonly promptDirectives?: ReadonlyArray<string>
+	readonly workflowStages?: ReadonlyArray<string>
 	readonly subtitleFileUrl?: string
 	readonly narrationAudioUrl?: string
 	readonly bgmAudioUrl?: string
@@ -179,6 +181,8 @@ export class GenerateVideoUseCase {
 			keywords: input.keywords,
 			stylePreset: new StylePresetVO(input.stylePreset).value,
 			copy: input.copy,
+			...(input.promptDirectives ? { promptDirectives: input.promptDirectives } : {}),
+			...(input.workflowStages ? { workflowStages: input.workflowStages } : {}),
 		})
 		const variantDecision = this.variantPolicy.resolveVariants(input.planTier)
 		const targetClipCount = input.planTier === PlanTier.FREE ? 2 : 3

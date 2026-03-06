@@ -1,7 +1,7 @@
 # billing Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Two-tier plan structure
 The system SHALL support 2 plan tiers in MVP: Free (₩0) and Starter (₩9,900/month, ₩7,900/month annual). Plan definitions MUST be stored in the `plans` table and include: monthly_quota, max_video_length_sec, watermark_required, multi_platform_enabled, bgm_library_tier, tts_voice_count.

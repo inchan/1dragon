@@ -1,4 +1,4 @@
-import { ProductCategory, type ProductCategory as ProductCategoryType } from '@snapvid/shared'
+import { ProductCategory, type ProductCategory as ProductCategoryType } from '@1dragon/shared'
 
 const MODEL_ELIGIBLE_CATEGORIES = new Set<ProductCategoryType>([
 	ProductCategory.FASHION,

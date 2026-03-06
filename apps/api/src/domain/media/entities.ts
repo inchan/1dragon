@@ -1,4 +1,4 @@
-import type { Platform } from '@snapvid/shared'
+import type { Platform } from '@1dragon/shared'
 import {
 	JobStatusVO,
 	QualityScoreVO,

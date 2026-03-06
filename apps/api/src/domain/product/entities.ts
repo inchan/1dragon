@@ -1,4 +1,4 @@
-import { Mood, ProductCategory, StylePreset, type Mood as MoodType, type ProductCategory as ProductCategoryType, type StylePreset as StylePresetType } from '@snapvid/shared'
+import { Mood, ProductCategory, StylePreset, type Mood as MoodType, type ProductCategory as ProductCategoryType, type StylePreset as StylePresetType } from '@1dragon/shared'
 
 const validProductCategory = new Set<string>(Object.values(ProductCategory))
 const validMood = new Set<string>(Object.values(Mood))

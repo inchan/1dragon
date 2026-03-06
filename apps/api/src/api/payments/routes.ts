@@ -5,7 +5,7 @@ import {
 	cancelSubscriptionRequestSchema,
 	createSubscriptionRequestSchema,
 	refundRequestSchema,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 import { HandleTossWebhookUseCase, InvalidWebhookSignatureError } from '@/application/payment/handle-toss-webhook.usecase.js'
 import { requireAuth } from '@/infrastructure/auth/hono-handler.js'
 import { logger } from '@/infrastructure/logging/logger.js'

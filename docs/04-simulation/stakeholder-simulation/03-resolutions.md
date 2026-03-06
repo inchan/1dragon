@@ -58,7 +58,7 @@
 
 ```mermaid
 timeline
-    title SnapVid 재조정 로드맵 (합의 기반)
+    title 1Dragon 재조정 로드맵 (합의 기반)
     section MVP (8주)
         B2C 전용 핵심 파이프라인 : 사진→영상 90초 이내
         하이브리드 엔진 PoC (Week 2) : Go/No-Go 게이트

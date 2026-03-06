@@ -72,11 +72,11 @@ jobs:
 
       - name: Install Playwright Browsers (PR only)
         if: github.event_name == 'pull_request'
-        run: pnpm --filter @snapvid/web exec playwright install --with-deps
+        run: pnpm --filter @1dragon/web exec playwright install --with-deps
 
       - name: E2E Tests (PR only)
         if: github.event_name == 'pull_request'
-        run: pnpm --filter @snapvid/web run e2e
+        run: pnpm --filter @1dragon/web run e2e
 
       - name: Upload Playwright Report (PR only)
         if: failure() && github.event_name == 'pull_request'

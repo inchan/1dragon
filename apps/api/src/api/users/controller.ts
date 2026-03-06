@@ -3,7 +3,7 @@ import { db } from '../../infrastructure/persistence/db.js'
 import {
 	users,
 } from '../../infrastructure/persistence/schema.js'
-import { AppError, ErrorCode, ok, err, type Result } from '@snapvid/shared'
+import { AppError, ErrorCode, ok, err, type Result } from '@1dragon/shared'
 import { logger } from '../../infrastructure/logging/index.js'
 
 /**

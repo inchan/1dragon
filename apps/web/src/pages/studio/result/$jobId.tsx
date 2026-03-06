@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Button } from '@snapvid/ui'
+import { Button } from '@1dragon/ui'
 import { useState, type JSX } from 'react'
 import {
 	SocialSharePanel,

@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { ErrorCode } from '@snapvid/shared'
+import { ErrorCode } from '@1dragon/shared'
 import { logger } from '@/infrastructure/logging/index.js'
 import type { GenerateModelImageUseCase } from '@/application/model-persona/generate-model-image.usecase.js'
 import {

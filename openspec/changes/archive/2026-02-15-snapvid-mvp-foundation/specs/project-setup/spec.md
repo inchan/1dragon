@@ -26,7 +26,7 @@ All packages MUST use TypeScript with `strict: true`, `noUncheckedIndexedAccess:
 
 #### Scenario: Shared tsconfig inheritance
 - **WHEN** a new package is added to the monorepo
-- **THEN** it extends `@snapvid/typescript-config/base.json` and inherits all strict settings
+- **THEN** it extends `@1dragon/typescript-config/base.json` and inherits all strict settings
 
 ---
 

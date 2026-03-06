@@ -1,7 +1,7 @@
 # notification Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: SSE-based real-time job status streaming
 The system SHALL provide Server-Sent Events (SSE) endpoint at `GET /api/v1/media/jobs/stream` for real-time job status updates. The stream MUST deliver JobStatusChanged events for all active jobs belonging to the authenticated user. Each event MUST include: job_id, status, progress percentage (0~100), message, and timestamp. SSE MUST support `Last-Event-ID` header for reconnection.

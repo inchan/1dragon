@@ -8,7 +8,7 @@ import {
 	type Mood as MoodType,
 	type Platform as PlatformType,
 	type StylePreset as StylePresetType,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 
 const VALID_CONTENT_FORMATS = new Set<string>(Object.values(ContentFormat))
 const VALID_HOOK_PATTERNS = new Set<string>(Object.values(HookPattern))

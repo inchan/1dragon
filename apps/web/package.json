@@ -1,5 +1,5 @@
 {
-	"name": "@snapvid/web",
+	"name": "@1dragon/web",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -17,8 +17,8 @@
 	},
 	"dependencies": {
 		"@sentry/react": "^10.38.0",
-		"@snapvid/shared": "workspace:*",
-		"@snapvid/ui": "workspace:*",
+		"@1dragon/shared": "workspace:*",
+		"@1dragon/ui": "workspace:*",
 		"@tanstack/react-query": "^5.90.21",
 		"@tanstack/react-query-devtools": "^5.91.3",
 		"@tanstack/react-router": "^1.159.5",
@@ -32,8 +32,8 @@
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.58.2",
-		"@snapvid/eslint-config": "workspace:^",
-		"@snapvid/typescript-config": "workspace:*",
+		"@1dragon/eslint-config": "workspace:^",
+		"@1dragon/typescript-config": "workspace:*",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"@vitejs/plugin-react": "^4.3.0",

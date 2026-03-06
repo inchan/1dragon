@@ -1,4 +1,4 @@
-# SnapVid Go-to-Market 전략
+# 1Dragon Go-to-Market 전략
 
 > **작성일:** 2026-02-08
 > **기반 문서:** MARKET_RESEARCH.md, TECH_RESEARCH.md, USER_RESEARCH.md

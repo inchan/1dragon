@@ -1,4 +1,4 @@
-import { PlanTier, SubscriptionStatus } from '@snapvid/shared'
+import { PlanTier, SubscriptionStatus } from '@1dragon/shared'
 import { describe, expect, it } from 'vitest'
 import { EntitlementSnapshot, InvalidSubscriptionTransitionError, Subscription } from './entities.js'
 

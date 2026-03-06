@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
-import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input, Label } from '@snapvid/ui'
+import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input, Label } from '@1dragon/ui'
 import { useCheckout, useLimitedOffer, usePlans, useSubscribe, useSubscription } from '@/features/payment/hooks'
 
 export const Route = createFileRoute('/pricing/')({

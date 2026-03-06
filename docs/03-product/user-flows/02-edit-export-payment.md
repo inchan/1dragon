@@ -1,6 +1,6 @@
 > [<- 허브로 돌아가기](../USER_FLOWS.md)
 
-# SnapVid 사용자 플로우 -- 편집 + 내보내기 + 결제
+# 1Dragon 사용자 플로우 -- 편집 + 내보내기 + 결제
 
 > **원본 문서:** USER_FLOWS.md (2026-02-09)
 > **범위:** 섹션 4 (편집 플로우) + 섹션 5 (내보내기 & 공유 플로우) + 섹션 6 (결제 & 구독 플로우)
@@ -72,7 +72,7 @@ flowchart TD
     EX_FREE --> EX_SELECT_ONE["플랫폼 선택<br/>○ TikTok  ○ Shorts  ○ Reels"]
     EX_PAID --> EX_SELECT_MULTI["플랫폼 선택 (복수)<br/>☑ TikTok  ☑ Shorts  ☑ Reels"]
 
-    EX_SELECT_ONE --> EX_WATERMARK_ON["워터마크 자동 적용<br/>'Made with SnapVid'"]
+    EX_SELECT_ONE --> EX_WATERMARK_ON["워터마크 자동 적용<br/>'Made with 1Dragon'"]
     EX_SELECT_MULTI --> EX_WATERMARK_CHOICE{워터마크 포함?}
 
     EX_WATERMARK_CHOICE -- 포함<br/>(+5건/월 보너스) --> EX_WATERMARK_ON

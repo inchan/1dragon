@@ -2,9 +2,9 @@ import { useState, type JSX } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
-import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input, Label, Select } from '@snapvid/ui'
+import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Input, Label, Select } from '@1dragon/ui'
 import { api } from '../../lib/api'
-import type { OnboardingRequest } from '@snapvid/shared'
+import type { OnboardingRequest } from '@1dragon/shared'
 
 export const Route = createFileRoute('/onboarding/')({
 	component: OnboardingPage,

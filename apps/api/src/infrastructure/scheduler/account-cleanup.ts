@@ -1,7 +1,7 @@
 import { Worker, Queue, type Job, type QueueOptions } from 'bullmq'
 import { redisConnection } from '../queue/bullmq.config.js'
 import { cleanupExpiredAccounts } from '../../api/users/controller.js'
-import { isOk, isErr } from '@snapvid/shared'
+import { isOk, isErr } from '@1dragon/shared'
 import { logger } from '../logging/index.js'
 
 /**

@@ -27,6 +27,16 @@ export const createVideoJobRequestSchema = z.object({
 	productCategory: z.string().optional(),
 	moods: z.array(z.string()).optional(),
 	keywords: z.array(z.string()).optional(),
+	autoShortformWorkflow: z.boolean().optional(),
+	creativeContext: z
+		.object({
+			location: z.string().trim().min(1).max(120).optional(),
+			profession: z.string().trim().min(1).max(120).optional(),
+			identity: z.string().trim().min(1).max(120).optional(),
+			traits: z.array(z.string().trim().min(1).max(80)).max(10).optional(),
+			visualStyle: z.string().trim().min(1).max(120).optional(),
+		})
+		.optional(),
 	copy: z
 		.object({
 			hook: z.string(),

@@ -1,4 +1,4 @@
-import type { Platform, StylePreset } from '@snapvid/shared'
+import type { Platform, StylePreset } from '@1dragon/shared'
 
 export interface I2VGenerateInput {
 	readonly provider: 'RUNWAY' | 'HAILUO' | 'GEMINI_VEO' | 'MINIMAX'
@@ -43,6 +43,8 @@ export interface BuildPromptInput {
 		readonly description: string
 		readonly cta: string
 	}
+	readonly promptDirectives?: ReadonlyArray<string>
+	readonly workflowStages?: ReadonlyArray<string>
 }
 
 export interface BuildPromptOutput {
@@ -79,6 +81,58 @@ export interface RemoveBgPort {
 
 export interface PromptBuilderPort {
 	build(input: BuildPromptInput): Promise<BuildPromptOutput>
+}
+
+export type MediaQueueName = 'MEDIA_GENERATE'
+export type BackoffStrategy = 'EXPONENTIAL'
+export type DeadLetterReason =
+	| 'MAX_ATTEMPTS_EXCEEDED'
+	| 'NON_RETRYABLE_PROVIDER_ERROR'
+	| 'PROVIDER_CHAIN_EXHAUSTED'
+	| 'UNKNOWN'
+export type DailyPublishHealthStatus = 'HEALTHY' | 'AT_RISK' | 'UNHEALTHY'
+
+export interface QueueRetryPolicy {
+	readonly maxAttempts: number
+	readonly strategy: BackoffStrategy
+	readonly baseDelayMs: number
+	readonly maxDelayMs: number
+}
+
+export interface QueueDeadLetterPolicy {
+	readonly queueName: string
+	readonly retainFailedForHours: number
+	readonly routeReasons: ReadonlyArray<DeadLetterReason>
+}
+
+export interface CircuitBreakerPolicy {
+	readonly failureThreshold: number
+	readonly openDurationMs: number
+	readonly halfOpenMaxCalls: number
+	readonly successThresholdToClose: number
+}
+
+export interface DailyPublishHealthPolicy {
+	readonly lookbackHours: number
+	readonly targetSuccessCount: number
+	readonly warningBelowCount: number
+	readonly criticalBelowCount: number
+	readonly alertCooldownMinutes: number
+}
+
+export interface DailyPublishHealthSnapshot {
+	readonly status: DailyPublishHealthStatus
+	readonly succeededCount: number
+	readonly targetCount: number
+	readonly missingCount: number
+	readonly shouldAlert: boolean
+}
+
+export interface MediaReliabilityPolicyPort {
+	getQueueRetryPolicy(queue: MediaQueueName): QueueRetryPolicy
+	getQueueDeadLetterPolicy(queue: MediaQueueName): QueueDeadLetterPolicy
+	getCircuitBreakerPolicy(): CircuitBreakerPolicy
+	getDailyPublishHealthPolicy(): DailyPublishHealthPolicy
 }
 
 export interface VideoJobRecord {

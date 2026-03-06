@@ -48,7 +48,7 @@ importers:
       '@sentry/node':
         specifier: ^10.38.0
         version: 10.38.0
-      '@snapvid/shared':
+      '@1dragon/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       better-auth:
@@ -88,7 +88,7 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
-      '@snapvid/typescript-config':
+      '@1dragon/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@types/pg':
@@ -118,10 +118,10 @@ importers:
       '@sentry/react':
         specifier: ^10.38.0
         version: 10.38.0(react@19.2.4)
-      '@snapvid/shared':
+      '@1dragon/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@snapvid/ui':
+      '@1dragon/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@tanstack/react-query':
@@ -158,10 +158,10 @@ importers:
       '@playwright/test':
         specifier: ^1.58.2
         version: 1.58.2
-      '@snapvid/eslint-config':
+      '@1dragon/eslint-config':
         specifier: workspace:^
         version: link:../../tooling/eslint
-      '@snapvid/typescript-config':
+      '@1dragon/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@types/react':
@@ -194,7 +194,7 @@ importers:
 
   packages/config:
     devDependencies:
-      '@snapvid/typescript-config':
+      '@1dragon/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
       tsup:
@@ -210,7 +210,7 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
-      '@snapvid/typescript-config':
+      '@1dragon/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@vitest/coverage-v8':
@@ -247,7 +247,7 @@ importers:
         specifier: ^3.0.0
         version: 3.4.0
     devDependencies:
-      '@snapvid/typescript-config':
+      '@1dragon/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript
       '@types/react':

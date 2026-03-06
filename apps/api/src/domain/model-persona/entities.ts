@@ -3,7 +3,7 @@ import {
 	Gender,
 	type AgeRange as AgeRangeType,
 	type Gender as GenderType,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 
 const VALID_GENDER = new Set<string>(Object.values(Gender))
 const VALID_AGE_RANGE = new Set<string>(Object.values(AgeRange))

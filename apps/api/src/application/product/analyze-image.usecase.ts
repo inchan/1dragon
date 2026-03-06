@@ -1,4 +1,4 @@
-import { Mood, ProductCategory, StylePreset } from '@snapvid/shared'
+import { Mood, ProductCategory, StylePreset } from '@1dragon/shared'
 import { ProductAnalysis, MoodVO, KeywordVO, StylePresetVO } from '@/domain/product/entities.js'
 import { logger } from '../../infrastructure/logging/index.js'
 import type {

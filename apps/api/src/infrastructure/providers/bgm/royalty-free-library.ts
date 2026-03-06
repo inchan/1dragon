@@ -1,4 +1,4 @@
-import { PlanTier } from '@snapvid/shared'
+import { PlanTier } from '@1dragon/shared'
 import type { BgmSelectionInput, BgmTrack } from './types.js'
 
 /**

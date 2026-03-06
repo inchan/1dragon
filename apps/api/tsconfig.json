@@ -1,5 +1,5 @@
 {
-	"extends": "@snapvid/typescript-config/node.json",
+	"extends": "@1dragon/typescript-config/node.json",
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {

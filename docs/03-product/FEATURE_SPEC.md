@@ -1,4 +1,4 @@
-# SnapVid 기능 명세서
+# 1Dragon 기능 명세서
 
 > **작성일:** 2026-02-09
 > **기반 문서:** TECH_RESEARCH.md, USER_RESEARCH.md, VISION.md, BUSINESS_MODEL.md, GTM_STRATEGY.md, MVP_SCOPE.md
@@ -10,7 +10,7 @@
 
 ```mermaid
 mindmap
-  root((SnapVid))
+  root((1Dragon))
     영상 생성 엔진
       F001 이미지 업로드 & 분석
       F002 AI 영상 스타일 선택
@@ -162,7 +162,7 @@ mindmap
 
 | 항목 | 내용 |
 |------|------|
-| **설명** | 하이브리드 엔진(AI 배경 생성 + 원본 상품 합성)으로 상품 정체성을 보존한 숏폼 마케팅 영상을 생성한다. SnapVid의 핵심 차별화 기능 |
+| **설명** | 하이브리드 엔진(AI 배경 생성 + 원본 상품 합성)으로 상품 정체성을 보존한 숏폼 마케팅 영상을 생성한다. 1Dragon의 핵심 차별화 기능 |
 | **우선순위** | P0 |
 | **Phase** | MVP |
 | **관련 페르소나** | 전체 |
@@ -458,7 +458,7 @@ mindmap
 2. Instagram: Meta Graph API 연동, 비즈니스 계정 필요
 3. YouTube: YouTube Data API 연동 (Phase 2)
 4. 공유 시 캡션(카피)+해시태그 자동 채움
-5. "Made with SnapVid" 워터마크 포함 시 월 5건 추가 보너스
+5. "Made with 1Dragon" 워터마크 포함 시 월 5건 추가 보너스
 
 **에지케이스:**
 
@@ -619,7 +619,7 @@ mindmap
 
 1. 기본 통계: 전체 플랜 제공 (생성 건수, 잔여 크레딧)
 2. 성과 분석: Pro 이상 (SNS 연동 시)
-3. ROI 대시보드: "이번 달 SnapVid로 절약한 시간: N시간, 금액: ₩N"
+3. ROI 대시보드: "이번 달 1Dragon로 절약한 시간: N시간, 금액: ₩N"
 4. 주간 성과 리포트 이메일 자동 발송
 
 ---

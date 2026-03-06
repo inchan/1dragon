@@ -1,4 +1,4 @@
-import type { PlanTier } from '@snapvid/shared'
+import type { PlanTier } from '@1dragon/shared'
 
 export type BgmTrack = {
 	readonly id: string

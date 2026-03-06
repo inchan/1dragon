@@ -1,4 +1,4 @@
-import type { Platform, ProductCategory } from '@snapvid/shared'
+import type { Platform, ProductCategory } from '@1dragon/shared'
 import type { HookFormula, Slide, Slideshow } from './entities.js'
 import type { ContentToneVO, SlideSpecVO } from './value-objects.js'
 

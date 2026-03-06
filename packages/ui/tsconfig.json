@@ -1,5 +1,5 @@
 {
-	"extends": "@snapvid/typescript-config/react.json",
+	"extends": "@1dragon/typescript-config/react.json",
 	"compilerOptions": {
 		"baseUrl": ".",
 		"outDir": "./dist"

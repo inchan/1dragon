@@ -1,4 +1,4 @@
-# SnapVid - AI 영상 생성 플랫폼
+# 1Dragon - AI 영상 생성 플랫폼
 
 상품 사진 1장으로 15~30초 숏폼 마케팅 영상을 자동 생성하는 SaaS 플랫폼입니다.
 
@@ -52,7 +52,7 @@
 ## 📁 프로젝트 구조
 
 ```
-snapvid/
+1dragon/
 ├── src/
 │   ├── app/                  # Next.js App Router
 │   │   ├── api/             # API Routes
@@ -164,6 +164,6 @@ ISC
 
 ---
 
-**개발 팀**: SnapVid Team
+**개발 팀**: 1Dragon Team
 **개발 시작**: 2026-02-11
 **목표 런칭**: 2026-04-11 (Beta)

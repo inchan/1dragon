@@ -1,4 +1,4 @@
-import { ProductCategory, Mood, StylePreset } from '@snapvid/shared'
+import { ProductCategory, Mood, StylePreset } from '@1dragon/shared'
 import type { VisionAnalysisOutput, VisionAnalyzerInput, VisionAnalyzerPort } from '@/domain/product/ports.js'
 
 export class GeminiVisionAdapter implements VisionAnalyzerPort {

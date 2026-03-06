@@ -1,4 +1,4 @@
-import type { ProductCategory } from '@snapvid/shared'
+import type { ProductCategory } from '@1dragon/shared'
 import type {
 	ModelImageGeneratorPort,
 	ModelPersonaSelectionRepository,

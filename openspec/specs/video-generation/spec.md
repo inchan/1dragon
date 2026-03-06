@@ -1,7 +1,7 @@
 # video-generation Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Video style selection with 5 presets
 The system SHALL provide 5 video style presets: 심플 (Simple), 다이내믹 (Dynamic), 감성 (Emotional), 트렌디 (Trendy), 프리미엄 (Premium). Each style MUST define camera movement, transition effects, speed, and color grading parameters. The system MUST auto-recommend top 3 styles based on product category and mood analysis.

@@ -52,11 +52,11 @@ The system SHALL generate platform-optimized video variants from a single master
 ---
 
 ### Requirement: Watermark policy
-Free tier videos MUST include a "Made with SnapVid" watermark that cannot be removed. Starter tier videos MUST have optional watermark (user choice). Starter users who include the watermark MUST receive +5 bonus credits per month.
+Free tier videos MUST include a "Made with 1Dragon" watermark that cannot be removed. Starter tier videos MUST have optional watermark (user choice). Starter users who include the watermark MUST receive +5 bonus credits per month.
 
 #### Scenario: Free tier watermark
 - **WHEN** a Free tier user generates a video
-- **THEN** "Made with SnapVid" watermark is applied to the bottom-right corner of all variants and cannot be removed
+- **THEN** "Made with 1Dragon" watermark is applied to the bottom-right corner of all variants and cannot be removed
 
 #### Scenario: Starter tier watermark opt-in
 - **WHEN** a Starter tier user chooses to include the watermark

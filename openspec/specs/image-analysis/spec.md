@@ -1,7 +1,7 @@
 # image-analysis Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Image upload with validation
 The system SHALL accept product image uploads in JPEG, PNG, and WebP formats. Maximum file size MUST be 20MB. Minimum resolution MUST be 720x720px. The system MUST validate format, size, and resolution before processing. EXIF rotation data MUST be auto-corrected.

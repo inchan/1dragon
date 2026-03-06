@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@snapvid/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@1dragon/ui'
 import type { JSX } from 'react'
 
 export const Route = createFileRoute('/settings/')({

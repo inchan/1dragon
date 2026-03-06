@@ -1,4 +1,4 @@
-import { PlanTier, SubscriptionStatus, type PlanTier as PlanTierType } from '@snapvid/shared'
+import { PlanTier, SubscriptionStatus, type PlanTier as PlanTierType } from '@1dragon/shared'
 
 type BillingCycle = 'MONTHLY' | 'YEARLY'
 

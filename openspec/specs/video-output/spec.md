@@ -1,7 +1,7 @@
 # video-output Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: In-app video preview
 The system SHALL provide immediate in-app video preview upon generation completion. Preview MUST support full-screen playback. Preview MUST show platform-specific safe zone overlays (TikTok/Shorts/Reels) as toggleable visual guides.
@@ -55,11 +55,11 @@ The system SHALL generate platform-optimized video variants from a single master
 ---
 
 ### Requirement: Watermark policy
-Free tier videos MUST include a "Made with SnapVid" watermark that cannot be removed. Starter tier videos MUST have optional watermark (user choice). Starter users who include the watermark MUST receive +5 bonus credits per month.
+Free tier videos MUST include a "Made with 1Dragon" watermark that cannot be removed. Starter tier videos MUST have optional watermark (user choice). Starter users who include the watermark MUST receive +5 bonus credits per month.
 
 #### Scenario: Free tier watermark
 - **WHEN** a Free tier user generates a video
-- **THEN** "Made with SnapVid" watermark is applied to the bottom-right corner of all variants and cannot be removed
+- **THEN** "Made with 1Dragon" watermark is applied to the bottom-right corner of all variants and cannot be removed
 
 #### Scenario: Starter tier watermark opt-in
 - **WHEN** a Starter tier user chooses to include the watermark

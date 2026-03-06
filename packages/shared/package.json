@@ -1,5 +1,5 @@
 {
-	"name": "@snapvid/shared",
+	"name": "@1dragon/shared",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -18,7 +18,7 @@
 		"zod": "^3.24.0"
 	},
 	"devDependencies": {
-		"@snapvid/typescript-config": "workspace:*",
+		"@1dragon/typescript-config": "workspace:*",
 		"@vitest/coverage-v8": "^3.0.0",
 		"tsup": "^8.4.0",
 		"typescript": "^5.7.0",

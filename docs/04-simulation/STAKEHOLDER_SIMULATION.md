@@ -1,4 +1,4 @@
-# SnapVid 이해관계자 시뮬레이션 (Stakeholder Simulation)
+# 1Dragon 이해관계자 시뮬레이션 (Stakeholder Simulation)
 
 이 문서는 더 나은 가독성과 유지보수를 위해 여러 개의 상세 문서로 분할되었습니다. 아래 목차를 통해 각 섹션으로 이동하실 수 있습니다.
 

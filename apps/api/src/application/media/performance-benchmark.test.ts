@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks'
-import { PlanTier } from '@snapvid/shared'
+import { PlanTier } from '@1dragon/shared'
 import { describe, expect, it } from 'vitest'
 import type {
 	ComposerPort,

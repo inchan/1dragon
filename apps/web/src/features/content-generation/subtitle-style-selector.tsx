@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@snapvid/ui'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@1dragon/ui'
 import type { JSX } from 'react'
 import type { SubtitleStyle } from './types'
 

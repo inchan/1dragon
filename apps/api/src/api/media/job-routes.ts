@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { and, count, desc, eq } from 'drizzle-orm'
+import { and, count, desc, eq, gte } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { ErrorCode, PlanTier } from '@snapvid/shared'
+import { ErrorCode, PlanTier } from '@1dragon/shared'
+import { DailyPublishHealthService, MediaReliabilityPolicyService } from '@/domain/media/services.js'
 import { db } from '@/infrastructure/persistence/db.js'
 import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
 import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
@@ -35,6 +36,8 @@ export function createJobSubRouter(deps: {
 }): Hono {
 	const app = new Hono()
 	const { jobRepository, variantRepository } = deps
+	const reliabilityPolicy = new MediaReliabilityPolicyService().getDailyPublishHealthPolicy()
+	const dailyPublishHealthService = new DailyPublishHealthService(reliabilityPolicy)
 
 	app.post('/jobs', async (c) => {
 		const user = c.get('user')
@@ -131,14 +134,39 @@ export function createJobSubRouter(deps: {
 		}
 
 		const queuePayload: MediaGenerateJobData = {
+			...(parsed.data.creativeContext != null
+				? {
+					creativeContext: {
+						...(parsed.data.creativeContext.location
+							? { location: parsed.data.creativeContext.location }
+							: {}),
+						...(parsed.data.creativeContext.profession
+							? { profession: parsed.data.creativeContext.profession }
+							: {}),
+						...(parsed.data.creativeContext.identity
+							? { identity: parsed.data.creativeContext.identity }
+							: {}),
+						...(parsed.data.creativeContext.traits
+							? { traits: parsed.data.creativeContext.traits }
+							: {}),
+						...(parsed.data.creativeContext.visualStyle
+							? { visualStyle: parsed.data.creativeContext.visualStyle }
+							: {}),
+					},
+				}
+				: {}),
 			projectId: created.id,
 			userId: user.id,
 			imageUrl: parsed.data.imageUrl,
+			...(parsed.data.personaId != null ? { personaId: parsed.data.personaId } : {}),
 			...(idempotencyKey != null ? { idempotencyKey } : {}),
 			retryAttempt: 0,
 			...(parsed.data.productCategory != null ? { productCategory: parsed.data.productCategory } : {}),
 			...(parsed.data.moods != null ? { moods: parsed.data.moods } : {}),
 			...(parsed.data.keywords != null ? { keywords: parsed.data.keywords } : {}),
+			...(parsed.data.autoShortformWorkflow != null
+				? { autoShortformWorkflow: parsed.data.autoShortformWorkflow }
+				: {}),
 			...(parsed.data.copy != null ? { copy: parsed.data.copy } : {}),
 			options: {
 				duration: parsed.data.duration ?? CREATE_JOB_DEFAULT_DURATION,
@@ -206,6 +234,50 @@ export function createJobSubRouter(deps: {
 			},
 			201,
 		)
+	})
+
+	app.get('/jobs/health/daily-publish', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const now = new Date()
+		const windowStart = new Date(
+			now.getTime() - reliabilityPolicy.lookbackHours * 60 * 60 * 1000,
+		)
+
+		const [row] = await db
+			.select({ succeededCount: count() })
+			.from(videoJobs)
+			.where(
+				and(
+					eq(videoJobs.userId, user.id),
+					eq(videoJobs.status, 'SUCCEEDED'),
+					gte(videoJobs.completedAt, windowStart),
+				),
+			)
+
+		const rawCount = row?.succeededCount ?? 0
+		const succeededCount = typeof rawCount === 'number' ? rawCount : Number(rawCount)
+		const health = dailyPublishHealthService.evaluate(succeededCount)
+
+		return c.json({
+			success: true,
+			data: {
+				status: health.status,
+				succeededCount: health.succeededCount,
+				targetCount: health.targetCount,
+				missingCount: health.missingCount,
+				shouldAlert: health.shouldAlert,
+				lookbackHours: reliabilityPolicy.lookbackHours,
+				windowStartAt: windowStart.toISOString(),
+				windowEndAt: now.toISOString(),
+				alertMessage: health.shouldAlert
+					? `최근 ${reliabilityPolicy.lookbackHours}시간 성공 발행이 목표(${health.targetCount}) 미만입니다.`
+					: null,
+			},
+		})
 	})
 
 	app.get('/jobs/:jobId', async (c) => {

@@ -1,4 +1,4 @@
-# SnapVid 사용자 플로우
+# 1Dragon 사용자 플로우
 
 > **작성일:** 2026-02-09
 > **기반 문서:** TECH_RESEARCH.md, USER_RESEARCH.md, VISION.md, BUSINESS_MODEL.md, GTM_STRATEGY.md, MVP_SCOPE.md, FEATURE_SPEC.md

@@ -1,7 +1,7 @@
 # model-persona Specification
 
 ## Purpose
-TBD - created by archiving change snapvid-mvp-foundation. Update Purpose after archive.
+TBD - created by archiving change 1dragon-mvp-foundation. Update Purpose after archive.
 ## Requirements
 ### Requirement: Category-based model persona trigger
 The system SHALL automatically detect whether the uploaded product belongs to a model-eligible category: 의류 (Clothing), 악세서리 (Accessories), 뷰티 (Beauty). When a model-eligible category is detected, the model persona selection UI MUST be automatically shown. For non-eligible categories (가전, 식품, 기타), the standard product-only video flow MUST proceed.

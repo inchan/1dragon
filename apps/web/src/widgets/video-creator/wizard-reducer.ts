@@ -6,8 +6,8 @@ import type {
 import type { ModelPersonaSelection } from '@/features/model-persona'
 import type { VideoPlatform, VideoVariantItem } from '@/features/video-output'
 import type { AnalyzeProductResponse } from '@/lib/api'
-import type { ProductCategory as ProductCategoryType, StylePreset } from '@snapvid/shared'
-import { ProductCategory } from '@snapvid/shared'
+import type { ProductCategory as ProductCategoryType, StylePreset } from '@1dragon/shared'
+import { ProductCategory } from '@1dragon/shared'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 

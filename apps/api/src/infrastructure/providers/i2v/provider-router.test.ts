@@ -1,4 +1,4 @@
-import { PlanTier } from '@snapvid/shared'
+import { PlanTier } from '@1dragon/shared'
 import { describe, expect, it, vi } from 'vitest'
 import type { I2VGenerateInput, I2VGenerateOutput, I2VPort } from '@/domain/media/ports.js'
 import { I2VProviderError } from './base-provider.js'
@@ -206,6 +206,68 @@ describe('ProviderRouter', () => {
 		})
 
 		expect(result.provider).toBe('RUNWAY')
+		expect(router.getCircuitStates().RUNWAY).toBe('CLOSED')
+	})
+
+	it('closes half-open circuit only after configured success threshold', async () => {
+		let failed = true
+		const runway = vi.fn(async () => {
+			if (failed) {
+				throw new I2VProviderError({ provider: 'RUNWAY', message: 'down', statusCode: 503 })
+			}
+			return buildSuccess('RUNWAY')
+		})
+
+		const router = new ProviderRouter(
+			{
+				RUNWAY: new StubProvider('RUNWAY', runway),
+				HAILUO: new StubProvider('HAILUO', async () => buildSuccess('HAILUO')),
+				GEMINI_VEO: new StubProvider('GEMINI_VEO', async () => buildSuccess('GEMINI_VEO')),
+				MINIMAX: new StubProvider('MINIMAX', async () => buildSuccess('MINIMAX')),
+			},
+			{
+				failureThreshold: 1,
+				openDurationMs: 10,
+				halfOpenMaxCalls: 2,
+				halfOpenSuccessThreshold: 2,
+			},
+		)
+
+		await router.generateClip({
+			planTier: PlanTier.STARTER,
+			isFirstVideo: false,
+			imageUrl: 'https://cdn.example.com/product.png',
+			prompt: 'ad',
+			durationSec: 10,
+			aspectRatio: '9:16',
+			fps: 30,
+		})
+
+		expect(router.getCircuitStates().RUNWAY).toBe('OPEN')
+
+		await new Promise((resolve) => setTimeout(resolve, 15))
+		failed = false
+
+		await router.generateClip({
+			planTier: PlanTier.STARTER,
+			isFirstVideo: false,
+			imageUrl: 'https://cdn.example.com/product.png',
+			prompt: 'ad',
+			durationSec: 10,
+			aspectRatio: '9:16',
+			fps: 30,
+		})
+		expect(router.getCircuitStates().RUNWAY).toBe('HALF_OPEN')
+
+		await router.generateClip({
+			planTier: PlanTier.STARTER,
+			isFirstVideo: false,
+			imageUrl: 'https://cdn.example.com/product.png',
+			prompt: 'ad',
+			durationSec: 10,
+			aspectRatio: '9:16',
+			fps: 30,
+		})
 		expect(router.getCircuitStates().RUNWAY).toBe('CLOSED')
 	})
 

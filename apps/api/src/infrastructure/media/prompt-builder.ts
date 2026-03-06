@@ -60,9 +60,49 @@ function buildCategoryHint(category: string): string {
 			return 'Focus on packaging finish, gloss/reflection control, and clean hero framing.'
 		case 'ACCESSORIES':
 			return 'Emphasize material shine, edges, and fine details with premium close-up motion.'
+		case 'ELECTRONICS':
+			return 'Show practical hand interaction, display readability, and tactile detail without changing button/layout geometry.'
+		case 'FOOD':
+			return 'Preserve authentic texture and color fidelity; prioritize appetizing but realistic lighting and serving context.'
+		case 'HOME':
+			return 'Demonstrate real room-context usage with stable perspective and believable scale.'
+		case 'SPORTS':
+			return 'Emphasize kinetic usage moments with realistic motion blur and product stability during movement.'
 		default:
 			return 'Prioritize clear product readability, stable geometry, and natural camera-led motion.'
 	}
+}
+
+function buildCreatorUsageHint(category: string): string {
+	switch (category.trim().toUpperCase()) {
+		case 'FASHION':
+			return 'Creator action cue: show on-body wear test (walk, turn, touch fabric) to prove fit and movement.'
+		case 'BEAUTY':
+			return 'Creator action cue: show natural hand-to-face or hand-to-product interaction to prove finish and usability.'
+		case 'ACCESSORIES':
+			return 'Creator action cue: include close hand interaction and mirror-check reaction beat for lifestyle authenticity.'
+		case 'ELECTRONICS':
+			return 'Creator action cue: include one-tap or one-swipe demonstration with immediate user reaction.'
+		case 'FOOD':
+			return 'Creator action cue: include bite/sip or plating reaction moment that feels spontaneous.'
+		default:
+			return 'Creator action cue: demonstrate real-world usage with natural hand interaction and believable micro-reactions.'
+	}
+}
+
+function buildInfluencerNarrative(input: BuildPromptInput): string {
+	const creatorTone =
+		input.stylePreset === 'PREMIUM'
+			? 'credible luxury creator testimonial'
+			: 'native social creator recommendation'
+
+	return [
+		`Creative objective: produce a ${creatorTone} that feels like a real influencer advertisement filmed for short-form feeds.`,
+		'Narrative timeline: 0-2s hook, 2-10s demonstration/social proof, 10-15s CTA close.',
+		'Use authentic UGC language: handheld realism, natural micro-expressions, and non-scripted pacing rather than CGI-looking perfection.',
+		'Text overlay rule: keep lines short (4-6 words), high contrast, place key text around upper 30% safe zone, avoid lower 20% UI obstruction area.',
+		'Human realism rule: if people/hands appear, keep anatomy natural (fingers, eyes, motion blur) and avoid uncanny artifacts.',
+	].join(' ')
 }
 
 function buildBaseNarrative(input: BuildPromptInput): string {
@@ -70,6 +110,13 @@ function buildBaseNarrative(input: BuildPromptInput): string {
 	const mood = input.moods.join(', ') || 'professional'
 	const keywords = joinKeywords(input.keywords)
 	const categoryHint = buildCategoryHint(input.productCategory)
+	const creatorUsageHint = buildCreatorUsageHint(input.productCategory)
+	const influencerNarrative = buildInfluencerNarrative(input)
+	const promptDirectives = input.promptDirectives
+		?.map((value) => value.trim())
+		.filter(Boolean) ?? []
+	const workflowStages =
+		input.workflowStages?.map((value) => value.trim()).filter(Boolean) ?? []
 
 	return [
 		`Product category: ${input.productCategory}.`,
@@ -83,8 +130,15 @@ function buildBaseNarrative(input: BuildPromptInput): string {
 		`Marketing hook: ${input.copy.hook}.`,
 		`Product description highlight: ${input.copy.description}.`,
 		`Call to action tone: ${input.copy.cta}.`,
+		influencerNarrative,
+		...(workflowStages.length > 0
+			? [`Execution workflow: ${workflowStages.join(' -> ')}.`]
+			: []),
+		...promptDirectives,
 		categoryHint,
+		creatorUsageHint,
 		'Maintain exact product identity from source image: do not change silhouette, logo, typography, or key visual marks.',
+		'No competing logos, extra products, or irrelevant props that dilute the advertised product.',
 		'Move camera/background rather than deforming the product. Keep composition brand-safe and ad-appropriate.',
 		'Open with camera motion already in progress from frame 1. no freeze frame at video start. Video begins mid-movement, not from a static standstill.',
 	].join(' ')

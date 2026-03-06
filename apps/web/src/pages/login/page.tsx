@@ -1,7 +1,7 @@
 import { useEffect, type JSX } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@snapvid/ui';
+import { Button } from '@1dragon/ui';
 import { useAuth } from '../../features/auth';
 
 export function LoginPage(): JSX.Element {

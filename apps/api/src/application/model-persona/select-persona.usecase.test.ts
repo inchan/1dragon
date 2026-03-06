@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { ProductCategory } from '@snapvid/shared'
+import { ProductCategory } from '@1dragon/shared'
 import { describe, expect, it } from 'vitest'
 import type {
 	ModelPersonaPresetRepository,

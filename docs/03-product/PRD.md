@@ -1,4 +1,4 @@
-# SnapVid PRD (Product Requirements Document)
+# 1Dragon PRD (Product Requirements Document)
 
 > **작성일:** 2026-02-09
 > **버전:** v1.0

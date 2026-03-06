@@ -3,7 +3,7 @@ import {
 	StylePreset,
 	type Platform as PlatformType,
 	type StylePreset as StylePresetType,
-} from '@snapvid/shared'
+} from '@1dragon/shared'
 
 const VALID_PLATFORMS = new Set<string>(Object.values(Platform))
 const VALID_STYLE_PRESETS = new Set<string>(Object.values(StylePreset))

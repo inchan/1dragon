@@ -1,5 +1,5 @@
 import { and, count, desc, eq } from 'drizzle-orm'
-import { Mood, StylePreset } from '@snapvid/shared'
+import { Mood, StylePreset } from '@1dragon/shared'
 import type {
 	ProductAnalysisCreateInput,
 	ProductAnalysisRecord,

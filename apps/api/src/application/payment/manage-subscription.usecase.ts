@@ -1,4 +1,4 @@
-import { PlanTier, SubscriptionStatus } from '@snapvid/shared'
+import { PlanTier, SubscriptionStatus } from '@1dragon/shared'
 import { EntitlementSnapshot, Subscription } from '@/domain/payment/entities.js'
 
 type ManageSubscriptionAction =

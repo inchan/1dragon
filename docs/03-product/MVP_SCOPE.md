@@ -1,4 +1,4 @@
-# SnapVid MVP 범위 정의
+# 1Dragon MVP 범위 정의
 
 > **작성일:** 2026-02-09
 > **기반 문서:** TECH_RESEARCH.md, USER_RESEARCH.md, VISION.md, BUSINESS_MODEL.md, GTM_STRATEGY.md
@@ -18,7 +18,7 @@
 |---|----------|----------|--------|----------|----------|
 | H1 | 상품 사진 1장으로 생성한 15초 영상이 수동 제작 영상 대비 70% 이상의 광고 성과(CTR)를 달성한다 | CTR 비교 | AI 영상 CTR >= 수동 영상 CTR x 0.7 | 베타 유저 50명 A/B 테스트 (Meta/TikTok 광고) | Beta 4주차 |
 | H2 | 1인 셀러가 첫 영상을 60초 이내에 생성하면, 주간 영상 제작 빈도가 3배 이상 증가한다 | 주간 영상 생성 수 | Week 1 대비 Week 4에서 3x | 코호트 분석 (주간 활성 사용자 생성 로그) | MVP 4주차 |
-| H3 | "Made with SnapVid" 워터마크 포함 영상의 바이럴 계수(K-factor)가 0.3 이상이다 | K-factor | >= 0.3 | 워터마크 영상 -> 서비스 유입 추적 (UTM) | MVP 8주차 |
+| H3 | "Made with 1Dragon" 워터마크 포함 영상의 바이럴 계수(K-factor)가 0.3 이상이다 | K-factor | >= 0.3 | 워터마크 영상 -> 서비스 유입 추적 (UTM) | MVP 8주차 |
 | H4 | 무료 사용자의 유료 전환율이 2% 이상이다 (B2C 기준) | Free -> Paid CVR | >= 2% | 무료 크레딧 소진 후 72시간 내 전환율 추적 | MVP 12주차 |
 
 ### 1.2 성공 기준 (3개월)
@@ -169,7 +169,7 @@
 | **플랫폼** | TikTok, YouTube Shorts, Instagram Reels |
 | **자동 최적화** | 세이프 존, 최적 길이, 비트레이트 각 플랫폼별 자동 조정 |
 | **출력 포맷** | 9:16, 1080x1920, 30fps, H.264+AAC, 8~12Mbps |
-| **워터마크** | Free: "Made with SnapVid" 포함(제거 불가) / Starter: 선택(포함 시 +5건/월 보너스) |
+| **워터마크** | Free: "Made with 1Dragon" 포함(제거 불가) / Starter: 선택(포함 시 +5건/월 보너스) |
 
 ---
 
@@ -337,7 +337,7 @@ sequenceDiagram
 
 ```mermaid
 gantt
-    title SnapVid MVP 개발 타임라인 (6주)
+    title 1Dragon MVP 개발 타임라인 (6주)
     dateFormat  YYYY-MM-DD
     axisFormat  %m/%d
 
@@ -398,7 +398,7 @@ gantt
 | 3 | **60초 이내 생성 시간 미달성**: API 응답 지연으로 생성 시간 초과 | 중간 | 높음 | 병렬 처리(배경 제거+카피+BGM 동시 호출). 프로그레스 바 + 인게이지먼트 UI("생성 중에 다른 상품도 올려보세요") |
 | 4 | **영상 저작권 이슈**: AI 생성 BGM의 YouTube/TikTok 저작권 주장 | 중간 | 중간 | 로열티 프리 라이브러리 우선 사용. Udio API 상업 라이선스 확인. 저작권 클레임 발생 시 자동 대체 BGM 제공 |
 | 5 | **비용 초과**: 무료 사용자 영상 생성 비용이 예산 초과 | 높음 | 중간 | 무료 티어는 Hailuo(건당 ₩728)로 비용 억제. 월 3건 제한. 무료 크레딧 소진 후 72시간 리밋 오퍼로 전환 유도 |
-| 6 | **규제 리스크**: 한국 AI 기본법(2026.01 시행) AI 생성 표시 의무 | 낮음 | 확실 | 영상 메타데이터에 AI 생성 정보 자동 삽입. "Made with SnapVid (AI-generated)" 표기. C2PA Content Credentials 표준 도입 준비 |
+| 6 | **규제 리스크**: 한국 AI 기본법(2026.01 시행) AI 생성 표시 의무 | 낮음 | 확실 | 영상 메타데이터에 AI 생성 정보 자동 삽입. "Made with 1Dragon (AI-generated)" 표기. C2PA Content Credentials 표준 도입 준비 |
 | 7 | **경쟁사 선점**: Creatify, Amazon Video Generator 등이 한국 시장 진입 | 중간 | 중간 | 네이버/쿠팡 생태계 네이티브 연동으로 선점. 한국어 특화(Typecast TTS + Claude Vision). 4~6주 빠른 MVP 출시 |
 | 8 | **베타 사용자 모집 실패**: 클로즈드 베타 100명 미달 | 낮음 | 낮음 | Pre-launch 웨이트리스트 3,000명 목표. 셀러 커뮤니티 시딩(아이보스, 네이버 카페). 웨이트리스트 순위제 바이럴 루프 |
 

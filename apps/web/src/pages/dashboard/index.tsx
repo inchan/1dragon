@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState, type JSX } from 'react'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@snapvid/ui'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@1dragon/ui'
 import {
 	DownloadActions,
 	RegenerationPanel,

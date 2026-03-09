@@ -1,4 +1,5 @@
 import type {
+	AgenticModeType,
 	AnalyzeProductRequest,
 	ProductAnalysisResponse,
 	OnboardingRequest,
@@ -321,10 +322,13 @@ export const api = {
 			'imageUrl' | 'stylePreset' | 'platforms' | 'duration' | 'stage' | 'token' | 'narration' | 'subtitleStyle'
 		> & {
 			idempotencyKey?: string
+			personaId?: string
 			productCategory?: string
 			moods?: string[]
 			keywords?: string[]
+			agenticMode?: AgenticModeType
 			autoShortformWorkflow?: boolean
+			skipWearableComposite?: boolean
 			creativeContext?: {
 				location?: string
 				profession?: string

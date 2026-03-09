@@ -9,6 +9,8 @@
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"validate:agentic:curl": "bash scripts/validate-agentic-job.sh",
+		"validate:agentic:smoke": "node scripts/agentic-smoke-test.mjs",
 		"db:seed:plans": "tsx src/infrastructure/persistence/seeds/plans.seed.ts",
 		"db:seed:model-persona": "tsx src/infrastructure/persistence/seeds/model-persona-presets.seed.ts",
 		"db:seed:style-presets": "tsx src/infrastructure/persistence/seeds/style-presets.seed.ts",

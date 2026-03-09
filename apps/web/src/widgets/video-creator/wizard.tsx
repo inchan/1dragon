@@ -27,8 +27,12 @@ import {
 } from '@/features/video-output'
 import { api } from '@/lib/api'
 import {
+	AgenticMode,
+	AgenticWorkflow,
 	ProductCategory,
+	type AgenticWorkflowType,
 	type ProductCategory as ProductCategoryType,
+	resolveAgenticExecutionPlan,
 	type StylePreset,
 } from '@1dragon/shared'
 import {
@@ -64,6 +68,17 @@ const STYLE_OPTIONS = [
 	{ value: 'PREMIUM', label: '프리미엄' },
 ]
 const CREATE_JOB_DEFAULT_DURATION = 15
+
+function formatAgenticWorkflowLabel(workflow: AgenticWorkflowType): string {
+	switch (workflow) {
+		case AgenticWorkflow.ORCHESTRATOR_WORKERS:
+			return 'Orchestrator-Workers'
+		case AgenticWorkflow.PROMPT_CHAIN:
+			return 'Prompt Chain'
+		default:
+			return 'Baseline'
+	}
+}
 
 function mapPlatformForApi(
 	platform: VideoPlatform,
@@ -167,6 +182,30 @@ export function VideoCreatorWizard(): JSX.Element {
 				(variant) => variant.platform === state.preview.selectedPlatform,
 			) ?? state.preview.variants[0],
 		[state.preview.selectedPlatform, state.preview.variants],
+	)
+	const activeAgenticPlan = useMemo(
+		() =>
+			resolveAgenticExecutionPlan({
+				agenticMode: AgenticMode.AUTO,
+				productCategory: state.file.category,
+				keywords: state.analysis.result?.keywords ?? [],
+				platforms: [mapPlatformForApi(state.preview.selectedPlatform)],
+				duration: CREATE_JOB_DEFAULT_DURATION,
+				autoShortformWorkflow: true,
+				skipWearableComposite:
+					!state.persona.skip && Boolean(state.persona.compositeImageUrl),
+				...(!state.persona.skip && selectedPersonaOption?.id
+					? { personaId: selectedPersonaOption.id }
+					: {}),
+			}),
+		[
+			selectedPersonaOption?.id,
+			state.analysis.result,
+			state.file.category,
+			state.persona.compositeImageUrl,
+			state.persona.skip,
+			state.preview.selectedPlatform,
+		],
 	)
 
 	useEffect(() => {
@@ -315,6 +354,12 @@ export function VideoCreatorWizard(): JSX.Element {
 				!state.persona.skip && state.persona.compositeImageUrl
 					? state.persona.compositeImageUrl
 					: analysis.originalImageUrl
+			const selectedPersonaId =
+				!state.persona.skip && selectedPersonaOption?.id
+					? selectedPersonaOption.id
+					: undefined
+			const skipWearableComposite =
+				!state.persona.skip && Boolean(state.persona.compositeImageUrl)
 
 			const jobResult = await api.createVideoJob({
 				imageUrl: effectiveImageUrl,
@@ -324,8 +369,12 @@ export function VideoCreatorWizard(): JSX.Element {
 				narration: state.style.narration.enabled,
 				subtitleStyle: state.style.subtitleStyle,
 				productCategory: state.file.category,
-				moods: [],
-				keywords: [],
+				...(selectedPersonaId ? { personaId: selectedPersonaId } : {}),
+				moods: analysis.moods,
+				keywords: analysis.keywords,
+				agenticMode: AgenticMode.AUTO,
+				autoShortformWorkflow: true,
+				skipWearableComposite,
 				copy: {
 					hook: state.style.editableCopy.hookCopy,
 					description: state.style.editableCopy.bodyCopy,
@@ -569,6 +618,33 @@ export function VideoCreatorWizard(): JSX.Element {
 							dispatch({ type: 'SET_SUBTITLE_STYLE', style })
 						}
 					/>
+					<Card>
+						<CardHeader>
+							<CardTitle>Agentic 전략</CardTitle>
+							<CardDescription>
+								agentic-ai-systems 패턴을 현재 생성 플로우에 맞춰 자동 선택합니다.
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-2 text-sm">
+							<p>
+								전략: <strong>{formatAgenticWorkflowLabel(activeAgenticPlan.workflow)}</strong>
+							</p>
+							<p className="text-muted-foreground">{activeAgenticPlan.reasoning.join(' ')}</p>
+							<p className="text-xs text-muted-foreground">
+								단계: {activeAgenticPlan.steps.join(' -> ')}
+							</p>
+							<p className="text-xs text-muted-foreground">
+								{activeAgenticPlan.features.shortformWorkflow
+									? '숏폼 플래너 사용'
+									: '기본 프롬프트 사용'}{' '}
+								·{' '}
+								{activeAgenticPlan.features.wearableComposite
+									? '착장 합성 사용'
+									: '원본 상품 유지'}{' '}
+								· 품질 게이트 사용
+							</p>
+						</CardContent>
+					</Card>
 					<div className="flex gap-2">
 						<Button
 							type="button"

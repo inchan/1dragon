@@ -45,5 +45,24 @@ export {
 	formatFileSize,
 } from './utils'
 
+// ── Agentic ───────────────────────────────────
+export {
+	AgenticMode,
+	agenticModeSchema,
+	AgenticWorkflow,
+	agenticWorkflowSchema,
+	AgenticRouting,
+	agenticRoutingSchema,
+	agenticExecutionPlanSchema,
+	resolveAgenticExecutionPlan,
+} from './agentic'
+export type {
+	AgenticMode as AgenticModeType,
+	AgenticWorkflow as AgenticWorkflowType,
+	AgenticRouting as AgenticRoutingType,
+	AgenticExecutionPlan,
+	ResolveAgenticExecutionPlanInput,
+} from './agentic'
+
 // ── Schemas (re-exported after 2.4 is complete) ──
 export * from './schemas'

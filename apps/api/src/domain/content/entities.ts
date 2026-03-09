@@ -59,7 +59,7 @@ export class HookFormula {
 			pattern: this.pattern,
 			template: this.template,
 			category: this.category,
-			exampleHook: this.exampleHook ?? undefined,
+			...(this.exampleHook ? { exampleHook: this.exampleHook } : {}),
 			successCount: this.successCount + (success ? 1 : 0),
 			totalUses: this.totalUses + 1,
 		})

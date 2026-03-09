@@ -103,6 +103,43 @@ npm run dev
 
 [http://localhost:3000](http://localhost:3000) 에서 확인하세요.
 
+## 테스트 이미지/영상 검증
+
+생성된 산출물은 `ffprobe` 기반 로컬 검증 스크립트로 빠르게 확인할 수 있습니다.
+
+```bash
+npm run media:validate -- \
+  --image artifacts/test-product-20260309-020243.png \
+  --video artifacts/test-video-20260309-020243.mp4 \
+  --out artifacts/test-media-validation.json
+```
+
+최신 테스트 산출물을 자동으로 고르려면 아래 스크립트를 사용합니다.
+
+```bash
+npm run media:validate:latest
+```
+
+## 피드백 루프 (확장 + 학습 + 개선)
+
+테스트 영상을 여러 버전으로 자동 생성하고, 규격/의도/표시(변화량)를 함께 점수화해서
+가장 좋은 후보를 고릅니다. 결과는 `artifacts/feedback-loop/`에 누적 저장됩니다.
+
+```bash
+npm run media:loop -- \
+  --image artifacts/test-product-20260309-020243.png \
+  --iterations 3 \
+  --headline "1Dragon TEST AD" \
+  --intent "상품 핵심가치를 15초 안에 전달" \
+  --cta "지금 영상 만들기"
+```
+
+생성물:
+- `artifacts/feedback-loop/<run-id>/candidate-*.mp4`
+- `artifacts/feedback-loop/<run-id>/loop-summary.json`
+- `artifacts/feedback-loop/<run-id>/loop-summary.md`
+- `artifacts/feedback-loop/history.jsonl` (학습 히스토리)
+
 ## 📋 MVP 개발 로드맵
 
 ### Sprint 0: 기반 구축 (Week 1) ✅

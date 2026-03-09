@@ -10,6 +10,7 @@ import {
 	stylePresetSchema,
 	subtitleStyleSchema,
 } from '../enums'
+import { agenticExecutionPlanSchema, agenticModeSchema } from '../agentic'
 
 // ── Request Schemas ──────────────────────────────────────────────────────────
 
@@ -27,7 +28,9 @@ export const createVideoJobRequestSchema = z.object({
 	productCategory: z.string().optional(),
 	moods: z.array(z.string()).optional(),
 	keywords: z.array(z.string()).optional(),
+	agenticMode: agenticModeSchema.optional(),
 	autoShortformWorkflow: z.boolean().optional(),
+	skipWearableComposite: z.boolean().optional(),
 	creativeContext: z
 		.object({
 			location: z.string().trim().min(1).max(120).optional(),
@@ -76,6 +79,7 @@ export const createVideoJobResponseSchema = z.object({
 	retryCount: z.number().int().min(0),
 	canRetry: z.boolean(),
 	createdAt: z.string().datetime(),
+	agenticPlan: agenticExecutionPlanSchema.optional(),
 })
 
 export const videoVariantResponseSchema = z.object({

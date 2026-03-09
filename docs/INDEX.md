@@ -49,12 +49,16 @@
 - **[초기 설계 (Initial Design)](05-architecture/INITIAL_DESIGN.md)**: MVP 기술 스택, 디렉토리 구조, 핵심 인터페이스
 - **[Gap 분석 (Gap Analysis)](05-architecture/GAP_ANALYSIS_REPORT.md)**: PRD vs 설계 정합성 검증
 - **[개정 설계 (Revised Design)](05-architecture/REVISED_DESIGN.md)**: Gap 보완 후 최종 확정 아키텍처 (Week 3 기준)
+- **[Agentic AI 통합 문서](05-architecture/AGENTIC_AI_SYSTEMS.md)**: agentic-ai-systems 패턴을 1dragon 파이프라인에 맞게 이식한 구조
 
 ### 6. Operations (운영/신뢰성)
 - **[구조 진단 및 실행 계획](06-operations/ZODRAGON_STRUCTURE_GAP_PLAN_2026-02-24.md)**: 분야별 상태/갭/P0~P2 실행계획
 - **[P0 신뢰성 포트 계약서](06-operations/P0_RELIABILITY_PORT_CONTRACT.md)**: 재시도·DLQ·서킷·헬스체크 타입 기준
 - **[P0 운영 기준서](06-operations/P0_RELIABILITY_RUNBOOK.md)**: 장애 대응/운영 규칙
 - **[P0 QA 체크리스트](06-operations/P0_RELIABILITY_QA_CHECKLIST.md)**: 회귀 검증 항목
+- **[Agentic AI 검증 체크리스트](06-operations/AGENTIC_AI_VALIDATION_CHECKLIST.md)**: agentic routing / API / 워커 / 웹 검증 순서
+- **[Agentic AI PR 체크리스트](06-operations/AGENTIC_AI_PR_CHECKLIST.md)**: PR 제출 전 필수 점검 항목
+- **[파이프라인 단계별 검증 문서](06-operations/PIPELINE_STAGE_VALIDATION.md)**: 가장 작은 단계 단위로 프로세스/산출물 검증 현황 정리
 
 ---
 > **Note**: This documentation structure is designed to support the AI-Driven Development Lifecycle (AI-DLC).

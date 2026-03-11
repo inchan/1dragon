@@ -32,6 +32,8 @@ export {
 	contentFormatSchema,
 	HookPattern,
 	hookPatternSchema,
+	StoryConceptFamily,
+	storyConceptFamilySchema,
 	SlideRole,
 	slideRoleSchema,
 } from './enums'
@@ -53,10 +55,14 @@ export {
 	agenticWorkflowSchema,
 	AgenticRouting,
 	agenticRoutingSchema,
+	agenticGoalSchema,
+	agenticMissionSchema,
 	agenticExecutionPlanSchema,
 	resolveAgenticExecutionPlan,
 } from './agentic'
 export type {
+	AgenticGoal,
+	AgenticMission,
 	AgenticMode as AgenticModeType,
 	AgenticWorkflow as AgenticWorkflowType,
 	AgenticRouting as AgenticRoutingType,

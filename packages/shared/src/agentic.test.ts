@@ -16,17 +16,24 @@ describe('resolveAgenticExecutionPlan', () => {
 			duration: 15,
 		})
 
-		expect(plan).toEqual({
-			mode: AgenticMode.AUTO,
-			routing: AgenticRouting.AUTO,
-			workflow: AgenticWorkflow.BASELINE,
-			reasoning: ['Simple single-platform request detected.'],
-			steps: ['direct_generate', 'quality_gate'],
-			features: {
-				evaluator: true,
-				shortformWorkflow: false,
-				wearableComposite: false,
-			},
+		expect(plan.mode).toBe(AgenticMode.AUTO)
+		expect(plan.routing).toBe(AgenticRouting.AUTO)
+		expect(plan.workflow).toBe(AgenticWorkflow.BASELINE)
+		expect(plan.reasoning).toEqual(['Simple single-platform request detected.'])
+		expect(plan.steps).toEqual(['direct_generate', 'quality_gate'])
+		expect(plan.mission.soul).toContain('safe to ship')
+		expect(plan.mission.purpose).toContain('conversion-focused')
+		expect(plan.mission.philosophy).toContain(
+			'Autonomously derive the next concrete goal from the brief instead of waiting for manual micromanagement.',
+		)
+		expect(plan.mission.goals.map((goal) => goal.name)).toContain('Finish with evidence')
+		expect(plan.mission.successCriteria).toContain(
+			'The final result is defensible at the quality gate.',
+		)
+		expect(plan.features).toEqual({
+			evaluator: true,
+			shortformWorkflow: false,
+			wearableComposite: false,
 		})
 		expect(agenticExecutionPlanSchema.parse(plan)).toEqual(plan)
 	})
@@ -43,6 +50,11 @@ describe('resolveAgenticExecutionPlan', () => {
 		expect(plan.reasoning).toEqual([
 			'Detected richer creative input that benefits from staged prompt construction.',
 		])
+		expect(plan.mission.soul).toContain('Think before generating')
+		expect(plan.mission.goals.map((goal) => goal.name)).toContain(
+			'Think in stages before generating',
+		)
+		expect(plan.mission.purpose).toContain('conversion-focused asset')
 		expect(plan.steps).toEqual([
 			'analyze_brief',
 			'build_prompt',
@@ -78,6 +90,12 @@ describe('resolveAgenticExecutionPlan', () => {
 		expect(plan.reasoning).toContain(
 			'Multiple delivery targets benefit from routed orchestration.',
 		)
+		expect(plan.mission.soul).toContain('creative team')
+		expect(plan.mission.purpose).toContain('multiple surfaces')
+		expect(plan.mission.philosophy).toContain(
+			'Keep one core story while adapting framing and pacing to each destination surface.',
+		)
+		expect(plan.mission.goals.map((goal) => goal.name)).toContain('Land a full short-form story arc')
 		expect(plan.steps).toEqual([
 			'route_request',
 			'shortform_planner_worker',
@@ -98,17 +116,18 @@ describe('resolveAgenticExecutionPlan', () => {
 			autoShortformWorkflow: true,
 		})
 
-		expect(plan).toEqual({
-			mode: AgenticMode.CHAIN,
-			routing: AgenticRouting.MANUAL,
-			workflow: AgenticWorkflow.PROMPT_CHAIN,
-			reasoning: ['Manual prompt chain mode requested.'],
-			steps: ['analyze_brief', 'build_prompt', 'generate_video', 'quality_gate'],
-			features: {
-				evaluator: true,
-				shortformWorkflow: true,
-				wearableComposite: false,
-			},
+		expect(plan.mode).toBe(AgenticMode.CHAIN)
+		expect(plan.routing).toBe(AgenticRouting.MANUAL)
+		expect(plan.workflow).toBe(AgenticWorkflow.PROMPT_CHAIN)
+		expect(plan.reasoning).toEqual(['Manual prompt chain mode requested.'])
+		expect(plan.mission.philosophy).toContain(
+			'Honor the user-selected workflow, then self-manage each stage rigorously until the quality gate decides the outcome.',
+		)
+		expect(plan.mission.goals.map((goal) => goal.name)).toContain('Land a full short-form story arc')
+		expect(plan.features).toEqual({
+			evaluator: true,
+			shortformWorkflow: true,
+			wearableComposite: false,
 		})
 	})
 
@@ -126,6 +145,12 @@ describe('resolveAgenticExecutionPlan', () => {
 			'video_generation_worker',
 			'quality_gate',
 		])
+		expect(plan.mission.goals.map((goal) => goal.name)).toContain(
+			'Humanize the context believably',
+		)
+		expect(plan.mission.successCriteria).toContain(
+			'Any wearable or persona context improves persuasion without overpowering the product.',
+		)
 		expect(plan.features).toEqual({
 			evaluator: true,
 			shortformWorkflow: false,
@@ -141,17 +166,18 @@ describe('resolveAgenticExecutionPlan', () => {
 			keywords: ['shoe'],
 		})
 
-		expect(plan).toEqual({
-			mode: AgenticMode.BASELINE,
-			routing: AgenticRouting.MANUAL,
-			workflow: AgenticWorkflow.BASELINE,
-			reasoning: ['Manual baseline mode requested.'],
-			steps: ['direct_generate', 'quality_gate'],
-			features: {
-				evaluator: true,
-				shortformWorkflow: false,
-				wearableComposite: false,
-			},
+		expect(plan.mode).toBe(AgenticMode.BASELINE)
+		expect(plan.routing).toBe(AgenticRouting.MANUAL)
+		expect(plan.workflow).toBe(AgenticWorkflow.BASELINE)
+		expect(plan.reasoning).toEqual(['Manual baseline mode requested.'])
+		expect(plan.mission.purpose).toContain('conversion-focused asset')
+		expect(plan.mission.goals.map((goal) => goal.name)).not.toContain(
+			'Humanize the context believably',
+		)
+		expect(plan.features).toEqual({
+			evaluator: true,
+			shortformWorkflow: false,
+			wearableComposite: false,
 		})
 	})
 })

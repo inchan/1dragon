@@ -1,27 +1,24 @@
 import { ProductCategory, type ProductCategory as ProductCategoryType } from '@1dragon/shared'
+import {
+	SHORTFORM_EXPERIMENT_TEAM,
+	SHORTFORM_TREND_SNAPSHOT,
+} from './shortform-trend-snapshot.js'
 
 export const SHORTFORM_WORKFLOW_STAGES = [
-	'리서치',
-	'기획',
-	'피드백',
-	'재기획',
-	'개발',
-	'QA',
-	'피드빅',
-	'코드리뷰',
-	'퀄리키 개발',
-	'QA',
-	'회고',
-	'에이전트업데이트',
+	'상품 분석',
+	'트렌드 리서치',
+	'메시지 설계',
+	'컷 구성',
+	'프로토타입 생성',
+	'비판 리뷰',
+	'수정',
+	'비전 평가',
+	'최종 판정',
 ] as const
 
-const TREND_SOURCE_LINKS = [
-	'https://ads.tiktok.com/business/en-US/next',
-	'https://newsroom.tiktok.com/tiktok-next-report-2026-latam',
-	'https://ads.tiktok.com/business/creativecenter/hashtag/ootd/pc/en?countryCode=KR&period=120',
-	'https://ads.tiktok.com/business/creativecenter/hashtag/outfit/pc/en?countryCode=KR&period=120',
-	'https://blog.youtube/news-and-events/new-shorts-creation-tools-2025/',
-] as const
+const TREND_SOURCE_LINKS = SHORTFORM_TREND_SNAPSHOT.officialSources.map((source) => source.url)
+const TREND_SIGNAL_TITLES = SHORTFORM_TREND_SNAPSHOT.trendSignals.map((signal) => signal.title)
+const TEAM_TITLES = SHORTFORM_EXPERIMENT_TEAM.map((member) => member.title)
 
 const SHORTFORM_CATEGORY_SET = new Set<ProductCategoryType>([ProductCategory.FASHION])
 
@@ -133,12 +130,16 @@ export function applyShortformWorkflow(input: ShortformWorkflowInput): Shortform
 
 	const promptDirectives = [
 		`Workflow execution order: ${SHORTFORM_WORKFLOW_STAGES.join(' -> ')}.`,
-		`Trend snapshot date: 2026-02-20. Official references: ${TREND_SOURCE_LINKS.join(' | ')}.`,
+		`Trend snapshot date: ${SHORTFORM_TREND_SNAPSHOT.snapshotDate}. Official references: ${TREND_SOURCE_LINKS.join(' | ')}.`,
+		`Trend signals to honor: ${TREND_SIGNAL_TITLES.join(' | ')}.`,
+		`Message patterns: ${SHORTFORM_TREND_SNAPSHOT.messagePatterns.join(' | ')}.`,
+		`Execution team: ${TEAM_TITLES.join(' | ')}. Always include the critical reviewer before finalizing.`,
 		`Location direction: ${location} urban fashion street vibe with trendy cafe/storefront background.`,
 		`Talent direction: ${identity}, profession ${profession}, traits ${traits.join(', ')}.`,
 		`Visual direction: ${visualStyle}; photorealistic live-action texture, natural handheld micro-motion, short-form social pacing.`,
-		'Trend mix direction: OOTD fit-check + GRWM rhythm + comment challenge CTA.',
-		'Scene timeline: 0-1.5s hook entrance, 1.5-3.5s walk and spin fit-check, 3.5-5.0s confident close-up with challenge CTA.',
+		'Trend mix direction: OOTD fit-check + curiosity hook + emotional payoff + comment challenge CTA.',
+		'Critical review rule: aggressively question click-worthiness, message clarity, and target-age fit before accepting a cut.',
+		'Scene timeline: 0-1.5s hook entrance, 1.5-3.5s proof beat with movement, 3.5-5.0s emotional payoff and challenge CTA.',
 		'Caption sticker direction: "성수 OOTD", "하이패션 무드", "오늘 코디 어때?" in upper safe zone.',
 	].map((value) => value.trim())
 
@@ -146,7 +147,7 @@ export function applyShortformWorkflow(input: ShortformWorkflowInput): Shortform
 		enabled: true,
 		workflowStages: [...SHORTFORM_WORKFLOW_STAGES],
 		trendSources: [...TREND_SOURCE_LINKS],
-		trendSnapshotDate: '2026-02-20',
+		trendSnapshotDate: SHORTFORM_TREND_SNAPSHOT.snapshotDate,
 		moods: moodSet,
 		keywords: keywordSet,
 		copy: {

@@ -140,6 +140,20 @@ export const HookPattern = {
 export type HookPattern = (typeof HookPattern)[keyof typeof HookPattern]
 export const hookPatternSchema = z.nativeEnum(HookPattern)
 
+// ── StoryConceptFamily ───────────────────────
+export const StoryConceptFamily = {
+	FIT_CHECK: 'FIT_CHECK',
+	DETAIL_PROOF: 'DETAIL_PROOF',
+	COMMENT_CHALLENGE: 'COMMENT_CHALLENGE',
+	ROUTINE_STORY: 'ROUTINE_STORY',
+	PROBLEM_SOLUTION: 'PROBLEM_SOLUTION',
+	LIFESTYLE_DEMO: 'LIFESTYLE_DEMO',
+	SOCIAL_PROOF: 'SOCIAL_PROOF',
+} as const
+
+export type StoryConceptFamily = (typeof StoryConceptFamily)[keyof typeof StoryConceptFamily]
+export const storyConceptFamilySchema = z.nativeEnum(StoryConceptFamily)
+
 // ── SlideRole ────────────────────────────────
 export const SlideRole = {
 	HOOK: 'HOOK',

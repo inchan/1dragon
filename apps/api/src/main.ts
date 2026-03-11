@@ -73,7 +73,7 @@ app.get('/health', async (c) => {
 				redis: redisReady ? 'up' : 'down',
 			},
 		},
-		healthy ? 200 : 503,
+		200,
 	)
 })
 

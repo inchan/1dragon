@@ -415,10 +415,12 @@ describe('processMediaGenerateJob', () => {
 			expect.objectContaining({
 				productCategory: 'FASHION',
 				promptDirectives: expect.arrayContaining([
+					expect.stringContaining('Operating soul:'),
+					expect.stringContaining('Purpose:'),
 					expect.stringContaining('Workflow execution order'),
 					expect.stringContaining('성수동'),
 				]),
-				workflowStages: expect.arrayContaining(['리서치', '기획', '개발', 'QA']),
+				workflowStages: expect.arrayContaining(['상품 분석', '트렌드 리서치', '비판 리뷰', '비전 평가']),
 			}),
 		)
 	})

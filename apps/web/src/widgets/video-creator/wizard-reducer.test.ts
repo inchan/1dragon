@@ -150,6 +150,13 @@ describe('wizardReducer', () => {
 					...makeBaseState().persona,
 					compositeImageUrl: 'https://example.com/composite.png',
 				},
+				preview: {
+					...makeBaseState().preview,
+					remainingRegenerations: 1,
+					candidateVideoUrl: 'candidate.mp4',
+					candidatePlatform: 'tiktok',
+					previousVideoUrl: 'previous.mp4',
+				},
 			}
 
 			const next = wizardReducer(state, {
@@ -159,6 +166,10 @@ describe('wizardReducer', () => {
 			})
 
 			expect(next.persona.compositeImageUrl).toBeNull()
+			expect(next.preview.remainingRegenerations).toBe(5)
+			expect(next.preview.candidateVideoUrl).toBeNull()
+			expect(next.preview.candidatePlatform).toBeNull()
+			expect(next.preview.previousVideoUrl).toBeNull()
 		})
 	})
 
@@ -471,7 +482,7 @@ describe('wizardReducer', () => {
 	})
 
 	describe('REGENERATE', () => {
-		it('resets to STYLE step and clears generation + preview variants', () => {
+		it('resets to STYLE step, clears generation + preview variants, and consumes one free attempt', () => {
 			const state: WizardState = {
 				...makeBaseState(),
 				step: 'PREVIEW',
@@ -484,9 +495,13 @@ describe('wizardReducer', () => {
 				},
 				preview: {
 					...makeBaseState().preview,
+					remainingRegenerations: 5,
 					variants: [
 						{ platform: 'tiktok', videoUrl: 'https://v.mp4', thumbnailUrl: 'https://t.jpg' },
 					],
+					candidateVideoUrl: 'candidate.mp4',
+					candidatePlatform: 'tiktok',
+					previousVideoUrl: 'previous.mp4',
 				},
 			}
 
@@ -497,6 +512,10 @@ describe('wizardReducer', () => {
 			expect(next.generation.status).toBe('QUEUED')
 			expect(next.generation.jobId).toBe('')
 			expect(next.preview.variants).toEqual([])
+			expect(next.preview.remainingRegenerations).toBe(4)
+			expect(next.preview.candidateVideoUrl).toBeNull()
+			expect(next.preview.candidatePlatform).toBeNull()
+			expect(next.preview.previousVideoUrl).toBeNull()
 		})
 
 		it('preserves file and style state', () => {
@@ -518,6 +537,21 @@ describe('wizardReducer', () => {
 
 			expect(next.file.productName).toBe('가방')
 			expect(next.style.selectedStyle).toBe('PREMIUM')
+		})
+
+		it('does not change state when no free regenerations remain', () => {
+			const state: WizardState = {
+				...makeBaseState(),
+				step: 'PREVIEW',
+				preview: {
+					...makeBaseState().preview,
+					remainingRegenerations: 0,
+				},
+			}
+
+			const next = wizardReducer(state, { type: 'REGENERATE' })
+
+			expect(next).toBe(state)
 		})
 	})
 

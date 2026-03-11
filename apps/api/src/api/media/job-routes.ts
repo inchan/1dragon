@@ -4,8 +4,8 @@ import { Hono } from 'hono'
 import { ErrorCode, PlanTier, resolveAgenticExecutionPlan } from '@1dragon/shared'
 import { DailyPublishHealthService, MediaReliabilityPolicyService } from '@/domain/media/services.js'
 import { db } from '@/infrastructure/persistence/db.js'
-import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
 import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
+import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
 import {
 	QueueName,
 	addJob,
@@ -190,6 +190,12 @@ export function createJobSubRouter(deps: {
 				? { skipWearableComposite: parsed.data.skipWearableComposite }
 				: {}),
 			...(parsed.data.copy != null ? { copy: parsed.data.copy } : {}),
+			...(parsed.data.recentConceptFamilies != null
+				? { recentConceptFamilies: parsed.data.recentConceptFamilies }
+				: {}),
+			...(parsed.data.requestedConceptFamily != null
+				? { requestedConceptFamily: parsed.data.requestedConceptFamily }
+				: {}),
 			options: {
 				duration: parsed.data.duration ?? CREATE_JOB_DEFAULT_DURATION,
 				stylePreset: parsed.data.stylePreset,
@@ -201,18 +207,6 @@ export function createJobSubRouter(deps: {
 		try {
 			await addJob(QueueName.MEDIA_GENERATE, queuePayload, { jobId: created.id })
 			await jobRepository.updateStatus({ jobId: created.id, status: 'QUEUED', progress: 0 })
-			await appendJobStatusEvent({
-				jobId: created.id,
-				userId: user.id,
-				previousStatus: created.status,
-				newStatus: 'QUEUED',
-				metadata: {
-					source: 'queue',
-					idempotencyKey,
-					retryAttempt: 0,
-				},
-				retryCount: created.retryCount ?? 0,
-			})
 		} catch (error) {
 			logger.error(
 				{ error: error instanceof Error ? error.message : String(error), jobId: created.id },
@@ -332,8 +326,12 @@ export function createJobSubRouter(deps: {
 			.where(and(eq(jobEvents.jobId, job.id), eq(jobEvents.eventType, 'JOB_STATUS_CHANGED')))
 			.orderBy(desc(jobEvents.createdAt))
 			.limit(20)
+		const orderedRows = [...rows].sort(
+			(left, right) =>
+				new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+		)
 
-		const events = rows.map<JobStatusEvent>((row) => {
+		const events = orderedRows.map<JobStatusEvent>((row) => {
 			const payload = toRecord(row.payload)
 			const event = toJobStatusEventFromDbPayload(payload, {
 				id: job.id,

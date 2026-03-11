@@ -25,21 +25,19 @@ The system SHALL provide 5 video style presets: 심플 (Simple), 다이내믹 (D
 ---
 
 ### Requirement: Hybrid video generation engine
-The system SHALL generate videos using a hybrid approach: Remove.bg foreground extraction → I2V background/effect clip generation → FFmpeg composition with original product overlay. This hybrid approach MUST preserve 100% product image fidelity (no AI hallucination on the product itself). The output MUST be 9:16, 1080x1920, 30fps, H.264+AAC.
+The system SHALL generate videos using a hybrid approach: story planning → shot planning → prompt compilation → Remove.bg foreground extraction → I2V clip generation → FFmpeg composition with original product overlay. This hybrid approach MUST preserve product identity while also expressing a planned hook, proof beat, and payoff rather than only generic product motion. The output MUST remain 9:16, 1080x1920, 30fps, H.264+AAC.
 
-#### Scenario: Standard generation pipeline
+#### Scenario: Story-planned generation pipeline
 - **WHEN** a valid product image, style, copy, BGM, and subtitle data are provided
-- **THEN** the system generates a video by: (1) using foreground asset, (2) generating 3 background clips via I2V, (3) compositing product over backgrounds, (4) adding text/audio layers via FFmpeg
+- **THEN** the system SHALL generate a video by: (1) creating a story brief, (2) selecting a concept, (3) generating shot cards, (4) compiling provider prompts from those shot cards, (5) generating clips, and (6) compositing the final video
 
-#### Scenario: 3-clip video structure
-- **WHEN** a 30-second video is generated
-- **THEN** it consists of 3 clips: Clip 1 (Intro, 10s) with hook copy + product entrance, Clip 2 (Close-up, 10s) with product detail + description, Clip 3 (CTA, 10s) with call-to-action + brand info
+#### Scenario: Planned proof beat appears in generated structure
+- **WHEN** the planner selects a concept with a specific proof beat
+- **THEN** at least one planned shot card SHALL be dedicated to visually proving that promise instead of only showing passive product motion
 
-#### Scenario: 15-second video for Free tier
-- **WHEN** a Free tier user generates a video
-- **THEN** the output is 15 seconds with 2 clips (Intro 8s + CTA 7s)
-
----
+#### Scenario: Repeated generation changes story, not only micro-motion
+- **WHEN** the same product image is generated multiple times without locking a concept
+- **THEN** the resulting plans SHALL differ in hook, proof strategy, payoff, or CTA structure rather than only seed or camera micro-variation
 
 ### Requirement: 4-provider I2V fallback chain
 The system SHALL support 4 I2V providers: Runway Gen-4 Turbo, Hailuo 02, Google Gemini Veo, MiniMax. Provider selection MUST follow priority chains based on user plan. Paid users: Runway → Gemini Veo → MiniMax → Hailuo. Free users: Hailuo → MiniMax → Gemini Veo. First video ever: Runway (Best-foot-forward, regardless of plan).
@@ -118,30 +116,26 @@ The system SHALL perform automatic quality control after video generation. QC MU
 ---
 
 ### Requirement: Video regeneration
-The system SHALL allow users to regenerate videos with "다른 스타일로 다시 만들기" button. Free regeneration MUST be limited to 5 attempts per video. Each regeneration MUST use a different style or random seed.
+The system SHALL allow users to regenerate videos with "다른 스타일로 다시 만들기" button. Free regeneration MUST be limited to 5 attempts per video. Each regeneration MUST use a different approved concept family or narrative plan, and MAY additionally vary style or random seed.
 
-#### Scenario: User requests regeneration
+#### Scenario: Regeneration requests a new story plan
 - **WHEN** a user clicks "다른 스타일로 다시 만들기" with remaining free attempts
-- **THEN** a new video is generated with a different style and the attempt counter decrements
+- **THEN** the system SHALL create a new story plan that is distinct from the current video's concept family before generating the next result
 
 #### Scenario: Regeneration limit reached
 - **WHEN** a user has used all 5 free regeneration attempts
-- **THEN** the system shows "더 좋은 사진으로 다시 시도해보세요" guide and offers customer support link
-
----
+- **THEN** the system SHALL show "더 좋은 사진으로 다시 시도해보세요" guide and offer customer support link
 
 ### Requirement: Prompt generation for I2V
-The system SHALL generate I2V prompts by combining: product analysis data (category, mood, keywords), selected style parameters (camera movement, transitions), and copy data (hook, description, CTA). Prompts MUST be provider-specific (adapted to each I2V provider's prompt format).
+The system SHALL generate I2V prompts by compiling approved shot cards, product analysis data, selected style parameters, and copy data into provider-specific prompts. Prompt compilation MUST preserve a traceable mapping from each shot card to the corresponding provider prompt segment.
 
-#### Scenario: Prompt generation for Runway
-- **WHEN** generating a prompt for Runway Gen-4 Turbo
-- **THEN** the prompt includes Runway-specific parameters (image_ref, motion_strength, camera_movement) formatted per Runway API spec
+#### Scenario: Prompt compilation from shot cards
+- **WHEN** a shot plan is approved
+- **THEN** the prompt compiler SHALL generate provider-specific prompts that explicitly reflect the selected hook, proof beat, payoff, and CTA for each planned shot
 
-#### Scenario: Prompt generation for Gemini Veo
-- **WHEN** generating a prompt for Gemini Veo
-- **THEN** the prompt is adapted to Gemini Veo's input format with appropriate parameters
-
----
+#### Scenario: Prompt fact-check failure
+- **WHEN** fact-check detects that a planned shot card is missing or contradicted in the compiled provider prompt
+- **THEN** the system SHALL fail the prompt compilation gate and require prompt regeneration before provider execution
 
 ### Requirement: Job state machine
 Each video generation MUST follow a state machine: QUEUED → ANALYZING → GENERATING → COMPOSING → RENDERING_VARIANTS → SUCCEEDED / FAILED / DEGRADED_FAILED. State transitions MUST be persisted in the `job_events` table (Outbox pattern). Invalid state transitions MUST be rejected.

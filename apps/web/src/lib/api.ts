@@ -2,6 +2,7 @@ import type {
 	AgenticModeType,
 	AnalyzeProductRequest,
 	ProductAnalysisResponse,
+	StoryConceptFamily as StoryConceptFamilyType,
 	OnboardingRequest,
 	OnboardingResponse,
 	UpdateProfileRequest,
@@ -337,6 +338,8 @@ export const api = {
 				visualStyle?: string
 			}
 			copy?: { hook: string; description: string; cta: string }
+			recentConceptFamilies?: StoryConceptFamilyType[]
+			requestedConceptFamily?: StoryConceptFamilyType
 		},
 	): Promise<CreateVideoJobResponse & { isDuplicate?: boolean }> =>
 		fetchApi<CreateVideoJobResponse & { isDuplicate?: boolean }>('/api/v1/media/jobs', {

@@ -18,7 +18,8 @@
 		"media:validate": "node tooling/validate-media.mjs",
 		"media:validate:latest": "node tooling/validate-media.mjs --latest",
 		"media:loop": "node tooling/media-feedback-loop.mjs",
-		"media:loop:latest": "node tooling/media-feedback-loop.mjs --iterations 3"
+		"media:loop:latest": "node tooling/media-feedback-loop.mjs --iterations 3",
+		"media:research-loop": "pnpm --filter @1dragon/api loop:research"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

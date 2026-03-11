@@ -4,6 +4,7 @@ import {
 	PlanTier,
 	ProductCategory,
 	resolveAgenticExecutionPlan,
+	type AgenticExecutionPlan,
 	type ProductCategory as ProductCategoryType,
 } from '@1dragon/shared'
 import { Worker, type Job } from 'bullmq'
@@ -201,6 +202,19 @@ function buildPersonaTargetAudienceText(input: {
 		.join(' ')
 }
 
+function buildMissionPromptDirectives(mission: AgenticExecutionPlan['mission']): string[] {
+	return [
+		`Operating soul: ${mission.soul}`,
+		`Purpose: ${mission.purpose}`,
+		`Operating philosophy: ${mission.philosophy.join(' | ')}`,
+		...mission.goals.map(
+			(goal, index) =>
+				`Goal ${index + 1}: ${goal.name}. Outcome: ${goal.outcome} Success signal: ${goal.successSignal}`,
+		),
+		`Definition of done: ${mission.successCriteria.join(' | ')}`,
+	]
+}
+
 async function resolvePersonaPreset(input: {
 	readonly repository: ModelPersonaPresetRepositoryImpl
 	readonly personaId?: string
@@ -361,10 +375,13 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 		copy: baseCopy,
 		...(creativeContext ? { context: creativeContext } : {}),
 	})
-	const promptDirectives =
+	const missionDirectives = buildMissionPromptDirectives(agenticPlan.mission)
+	const promptDirectives = appendUniqueValues(
+		missionDirectives,
 		agenticPlan.workflow === AgenticWorkflow.PROMPT_CHAIN
 			? appendUniqueValues(shortformWorkflow.promptDirectives, PROMPT_CHAIN_DIRECTIVES)
-			: [...shortformWorkflow.promptDirectives]
+			: [...shortformWorkflow.promptDirectives],
+	)
 	const workflowStages =
 		agenticPlan.workflow === AgenticWorkflow.PROMPT_CHAIN
 			? appendUniqueValues(shortformWorkflow.workflowStages, PROMPT_CHAIN_STAGES)
@@ -380,12 +397,16 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			agenticMode: agenticPlan.mode,
 			agenticWorkflow: agenticPlan.workflow,
 			agenticRouting: agenticPlan.routing,
+			agenticPurpose: agenticPlan.mission.purpose,
+			agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
 		},
 		'resolved agentic execution plan',
 	)
 
 	const currentStatus = existing.status as JobStatus
 	const currentRetryCount = buildRetryCount(existing.retryCount)
+	let lastKnownStatus = currentStatus
+	const persistedTransitionIds = new Set<string>()
 	let inputImageUrl = job.data.imageUrl
 	let modelCompositeApplied = false
 	let modelPersonaSelectionId: string | null = existing.modelPersonaSelectionId
@@ -483,6 +504,12 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			moods,
 			keywords,
 			copy,
+			...(job.data.recentConceptFamilies
+				? { recentConceptFamilies: job.data.recentConceptFamilies }
+				: {}),
+			...(job.data.requestedConceptFamily
+				? { requestedConceptFamily: job.data.requestedConceptFamily }
+				: {}),
 			...(promptDirectives.length > 0 || workflowStages.length > 0
 				? {
 					promptDirectives,
@@ -492,9 +519,52 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			includeWatermark: planTier === PlanTier.FREE,
 			currentStatus,
 			currentRetryCount,
-		})
+			onTransition: async (transition) => {
+				lastKnownStatus = transition.newStatus
+				if (transition.newStatus === 'SUCCEEDED' || transition.newStatus === 'DEGRADED_FAILED') {
+					return
+				}
 
+				await persistJobTransition(repository, {
+					jobId,
+					userId,
+					previousStatus: transition.previousStatus,
+					newStatus: transition.newStatus,
+					retryCount: currentRetryCount,
+					metadata: {
+						...transition.metadata,
+						stage: 'generate-worker',
+						agenticMode: agenticPlan.mode,
+						agenticWorkflow: agenticPlan.workflow,
+						agenticRouting: agenticPlan.routing,
+						agenticReasoning: agenticPlan.reasoning,
+						agenticSteps: agenticPlan.steps,
+						agenticSoul: agenticPlan.mission.soul,
+						agenticPurpose: agenticPlan.mission.purpose,
+						agenticPhilosophy: agenticPlan.mission.philosophy,
+						agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
+						agenticSuccessCriteria: agenticPlan.mission.successCriteria,
+						modelCompositeApplied,
+						shortformWorkflowApplied: shortformWorkflow.enabled,
+						...(workflowStages.length > 0
+							? {
+								shortformWorkflowStages: workflowStages,
+								trendSnapshotDate: shortformWorkflow.trendSnapshotDate,
+							}
+							: {}),
+						...(modelPersonaSelectionId ? { modelPersonaSelectionId } : {}),
+					},
+					errorMessage: null,
+				})
+				persistedTransitionIds.add(transition.id)
+			},
+		})
 		for (const transition of generated.events) {
+			if (persistedTransitionIds.has(transition.id)) {
+				continue
+			}
+
+			lastKnownStatus = transition.newStatus
 			await persistJobTransition(repository, {
 				jobId,
 				userId,
@@ -509,6 +579,11 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 					agenticRouting: agenticPlan.routing,
 					agenticReasoning: agenticPlan.reasoning,
 					agenticSteps: agenticPlan.steps,
+					agenticSoul: agenticPlan.mission.soul,
+					agenticPurpose: agenticPlan.mission.purpose,
+					agenticPhilosophy: agenticPlan.mission.philosophy,
+					agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
+					agenticSuccessCriteria: agenticPlan.mission.successCriteria,
 					modelCompositeApplied,
 					shortformWorkflowApplied: shortformWorkflow.enabled,
 					...(workflowStages.length > 0
@@ -544,7 +619,10 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 				status: generated.status,
 				retryCount: generated.job.retryCount,
 				progress: normalizeProgress(generated.status),
-				completedAt: generated.status === 'SUCCEEDED' ? new Date() : null,
+				completedAt:
+					generated.status === 'SUCCEEDED' || generated.status === 'DEGRADED_FAILED'
+						? new Date()
+						: null,
 				updatedAt: new Date(),
 				...(modelPersonaSelectionId ? { modelPersonaSelectionId } : {}),
 				errorMessage:
@@ -576,7 +654,7 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 		await persistJobTransition(repository, {
 			jobId,
 			userId,
-			previousStatus: existing.status,
+			previousStatus: lastKnownStatus,
 			newStatus: finalStatus,
 			retryCount: nextRetryCount,
 			errorMessage,
@@ -585,6 +663,8 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 				canRetry: shouldRetry,
 				agenticMode: agenticPlan.mode,
 				agenticWorkflow: agenticPlan.workflow,
+				agenticPurpose: agenticPlan.mission.purpose,
+				agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
 			},
 		})
 
@@ -608,7 +688,7 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 						sourceQueue: QueueName.MEDIA_GENERATE,
 						failedAt: new Date().toISOString(),
 						metadata: {
-							previousStatus: existing.status,
+							previousStatus: lastKnownStatus,
 							finalStatus,
 							retryCount: nextRetryCount,
 							queueAttemptsConfigured: job.opts.attempts ?? mediaGenerateRetryPolicy.maxAttempts,

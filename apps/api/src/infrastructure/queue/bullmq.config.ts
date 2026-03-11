@@ -1,6 +1,11 @@
 import { Queue, type Job, type QueueOptions } from 'bullmq'
 import IORedis from 'ioredis'
-import type { AgenticExecutionPlan, AgenticMode, PlanTier } from '@1dragon/shared'
+import type {
+	AgenticExecutionPlan,
+	AgenticMode,
+	PlanTier,
+	StoryConceptFamily,
+} from '@1dragon/shared'
 import { MediaReliabilityPolicyService } from '@/domain/media/services.js'
 import { config } from '../../shared/config.js'
 
@@ -110,6 +115,8 @@ export interface MediaGenerateJobData {
 		description: string
 		cta: string
 	}
+	recentConceptFamilies?: StoryConceptFamily[]
+	requestedConceptFamily?: StoryConceptFamily
 	options: {
 		duration: number
 		stylePreset?: string

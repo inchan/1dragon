@@ -130,6 +130,9 @@ PY
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--)
+			shift 1
+			;;
 		--env-file)
 			ENV_FILE="$2"
 			shift 2

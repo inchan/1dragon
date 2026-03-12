@@ -140,7 +140,7 @@ pnpm media:smoke:video -- \
   --image /absolute/path/to/source-image.png \
   --prompt "Create a short vertical ecommerce video from this source image. Preserve the product identity exactly." \
   --aspect-ratio 9:16 \
-  --duration-seconds 4
+  --duration-seconds 8
 ```
 
 필수 환경 변수:

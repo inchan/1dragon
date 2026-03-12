@@ -20,7 +20,7 @@ import {
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 const DEFAULT_MODEL = 'veo-3.1-generate-preview'
 const DEFAULT_ASPECT_RATIO = '9:16'
-const DEFAULT_DURATION_SECONDS = 4
+const DEFAULT_DURATION_SECONDS = 8
 const DEFAULT_POLL_INTERVAL_MS = 10_000
 const DEFAULT_MAX_DURATION_MS = 8 * 60 * 1_000
 const DEFAULT_PROMPT = [
@@ -95,7 +95,7 @@ async function main(): Promise<void> {
 			'  --image <path>             Local source image path (required)',
 			'  --prompt <text>            Prompt override',
 			'  --aspect-ratio <ratio>     Default: 9:16',
-			'  --duration-seconds <n>     Default: 4',
+			'  --duration-seconds <n>     Default: 8',
 			'  --resolution <value>       Optional: 720p | 1080p | 4k',
 			'  --model <name>             Default: veo-3.1-generate-preview',
 			'  --run-name <label>         Optional suffix for artifact directory',

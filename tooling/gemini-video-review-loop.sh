@@ -14,7 +14,9 @@ AD_HOOK=""
 AD_MESSAGE=""
 AD_CTA=""
 AD_AUDIENCE=""
+CTA_MODE="in-video"
 REQUIRE_HUMAN="true"
+REQUIRE_OPENING_WEARER="true"
 REQUIRE_ACTIVE_DEMO="true"
 REQUIRE_STORY="true"
 REQUIRE_MESSAGE="true"
@@ -39,7 +41,9 @@ Options:
   --message <text>               Expected message / benefit for the ad brief
   --cta <text>                   Expected CTA for the ad brief
   --audience <text>              Expected audience for the ad brief
+  --cta-mode <mode>              in-video | external-overlay. Default: in-video
   --allow-no-human               Do not require visible person / wearer
+  --allow-product-only-opening   Do not require a visible wearer in the opening frame
   --allow-passive-demo           Do not require active demonstration
   --allow-no-story               Do not require story progression
   --allow-no-message             Do not require explicit message clarity
@@ -181,8 +185,16 @@ while [[ $# -gt 0 ]]; do
 			AD_AUDIENCE="$2"
 			shift 2
 			;;
+		--cta-mode)
+			CTA_MODE="$2"
+			shift 2
+			;;
 		--allow-no-human)
 			REQUIRE_HUMAN="false"
+			shift 1
+			;;
+		--allow-product-only-opening)
+			REQUIRE_OPENING_WEARER="false"
 			shift 1
 			;;
 		--allow-passive-demo)
@@ -256,6 +268,13 @@ if [[ "$REVIEW_BACKEND" == "api" || "$REVIEW_BACKEND" == "cli-then-api" ]]; then
 	fi
 fi
 
+if [[ "$CTA_MODE" == "external-overlay" ]]; then
+	REQUIRE_CTA="false"
+elif [[ "$CTA_MODE" != "in-video" ]]; then
+	echo "Unsupported CTA mode: $CTA_MODE" >&2
+	exit 1
+fi
+
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 if [[ -z "$OUT_DIR" ]]; then
 	OUT_DIR="$ROOT_DIR/artifacts/gemini-review-loop/$RUN_ID"
@@ -296,7 +315,7 @@ fi
 VIDEOS=("${VIDEOS[@]:0:$ITERATIONS}")
 
 RUN_MANIFEST_JSON="$OUT_DIR/run-manifest.json"
-python3 - "$RUN_MANIFEST_JSON" "$IMAGE_PATH" "$SOURCE_IMAGE_COPY" "$MODEL" "$ITERATIONS" "$REVIEW_BACKEND" "$AD_HOOK" "$AD_MESSAGE" "$AD_CTA" "$AD_AUDIENCE" "$REQUIRE_HUMAN" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" "${VIDEOS[@]}" <<'PY_MANIFEST'
+python3 - "$RUN_MANIFEST_JSON" "$IMAGE_PATH" "$SOURCE_IMAGE_COPY" "$MODEL" "$ITERATIONS" "$REVIEW_BACKEND" "$AD_HOOK" "$AD_MESSAGE" "$AD_CTA" "$AD_AUDIENCE" "$CTA_MODE" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" "${VIDEOS[@]}" <<'PY_MANIFEST'
 from pathlib import Path
 import json
 import sys
@@ -311,12 +330,14 @@ hook = sys.argv[7]
 message = sys.argv[8]
 cta = sys.argv[9]
 audience = sys.argv[10]
-require_human = sys.argv[11] == "true"
-require_active_demo = sys.argv[12] == "true"
-require_story = sys.argv[13] == "true"
-require_message = sys.argv[14] == "true"
-require_cta = sys.argv[15] == "true"
-videos = sys.argv[16:]
+cta_mode = sys.argv[11]
+require_human = sys.argv[12] == "true"
+require_opening_wearer = sys.argv[13] == "true"
+require_active_demo = sys.argv[14] == "true"
+require_story = sys.argv[15] == "true"
+require_message = sys.argv[16] == "true"
+require_cta = sys.argv[17] == "true"
+videos = sys.argv[18:]
 
 manifest = {
     "sourceImagePath": source_image,
@@ -329,9 +350,11 @@ manifest = {
         "message": message,
         "cta": cta,
         "audience": audience,
+        "ctaMode": cta_mode,
     },
     "requiredChecks": {
         "human_present": require_human,
+        "opening_has_wearer": require_opening_wearer,
         "active_demonstration": require_active_demo,
         "story_present": require_story,
         "message_present": require_message,
@@ -541,6 +564,7 @@ tech_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", e
 PY_FALLBACK_TECH
 	fi
 
+	FRAME_OPEN="$TMP_DIR/frame-${ITERATION}-open.jpg"
 	FRAME_A="$TMP_DIR/frame-${ITERATION}-a.jpg"
 	FRAME_B="$TMP_DIR/frame-${ITERATION}-b.jpg"
 	FRAME_C="$TMP_DIR/frame-${ITERATION}-c.jpg"
@@ -574,13 +598,14 @@ PY_FRAME_TIMES
 	FRAME_TIME_A="$(printf '%s\n' "$FRAME_TIMESTAMPS" | sed -n '1p')"
 	FRAME_TIME_B="$(printf '%s\n' "$FRAME_TIMESTAMPS" | sed -n '2p')"
 	FRAME_TIME_C="$(printf '%s\n' "$FRAME_TIMESTAMPS" | sed -n '3p')"
+	ffmpeg -y -loglevel error -ss "0.000" -i "$VIDEO_PATH" -frames:v 1 -q:v 2 "$FRAME_OPEN"
 	ffmpeg -y -loglevel error -ss "${FRAME_TIME_A:-0.000}" -i "$VIDEO_PATH" -frames:v 1 -q:v 2 "$FRAME_A"
 	ffmpeg -y -loglevel error -ss "${FRAME_TIME_B:-0.000}" -i "$VIDEO_PATH" -frames:v 1 -q:v 2 "$FRAME_B"
 	ffmpeg -y -loglevel error -ss "${FRAME_TIME_C:-0.000}" -i "$VIDEO_PATH" -frames:v 1 -q:v 2 "$FRAME_C"
 
 	PAYLOAD_JSON="$TMP_DIR/payload-${ITERATION}.json"
 	CLI_PROMPT_TXT="$TMP_DIR/prompt-${ITERATION}.txt"
-	python3 - "$IMAGE_PATH" "$FRAME_A" "$FRAME_B" "$FRAME_C" "$TECH_JSON" "$PAYLOAD_JSON" "$CLI_PROMPT_TXT" "$(basename "$VIDEO_PATH")" "$AD_HOOK" "$AD_MESSAGE" "$AD_CTA" "$AD_AUDIENCE" "$REQUIRE_HUMAN" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_PROMPT'
+	python3 - "$IMAGE_PATH" "$FRAME_OPEN" "$FRAME_A" "$FRAME_B" "$FRAME_C" "$TECH_JSON" "$PAYLOAD_JSON" "$CLI_PROMPT_TXT" "$(basename "$VIDEO_PATH")" "$AD_HOOK" "$AD_MESSAGE" "$AD_CTA" "$AD_AUDIENCE" "$CTA_MODE" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_PROMPT'
 from pathlib import Path
 import base64
 import json
@@ -588,22 +613,25 @@ import mimetypes
 import sys
 
 source_image = Path(sys.argv[1])
-frame_a = Path(sys.argv[2])
-frame_b = Path(sys.argv[3])
-frame_c = Path(sys.argv[4])
-technical_json = Path(sys.argv[5])
-payload_json = Path(sys.argv[6])
-cli_prompt_txt = Path(sys.argv[7])
-video_name = sys.argv[8]
-hook = sys.argv[9]
-message = sys.argv[10]
-cta = sys.argv[11]
-audience = sys.argv[12]
-require_human = sys.argv[13] == "true"
-require_active_demo = sys.argv[14] == "true"
-require_story = sys.argv[15] == "true"
-require_message = sys.argv[16] == "true"
-require_cta = sys.argv[17] == "true"
+frame_open = Path(sys.argv[2])
+frame_a = Path(sys.argv[3])
+frame_b = Path(sys.argv[4])
+frame_c = Path(sys.argv[5])
+technical_json = Path(sys.argv[6])
+payload_json = Path(sys.argv[7])
+cli_prompt_txt = Path(sys.argv[8])
+video_name = sys.argv[9]
+hook = sys.argv[10]
+message = sys.argv[11]
+cta = sys.argv[12]
+audience = sys.argv[13]
+cta_mode = sys.argv[14]
+require_human = sys.argv[15] == "true"
+require_opening_wearer = sys.argv[16] == "true"
+require_active_demo = sys.argv[17] == "true"
+require_story = sys.argv[18] == "true"
+require_message = sys.argv[19] == "true"
+require_cta = sys.argv[20] == "true"
 
 with technical_json.open() as fh:
     technical = json.load(fh)
@@ -624,9 +652,11 @@ brief = {
     "message": message or "unspecified",
     "cta": cta or "unspecified",
     "audience": audience or "unspecified",
+    "cta_mode": cta_mode,
 }
 required_checks = {
     "human_present": require_human,
+    "opening_has_wearer": require_opening_wearer,
     "active_demonstration": require_active_demo,
     "story_present": require_story,
     "message_present": require_message,
@@ -639,7 +669,8 @@ You are reviewing a short-form vertical ecommerce ad candidate.
 
 Use these inputs only:
 - source product image
-- sampled frames at 0.5s, 2.5s, and 4.5s
+- opening frame at 0.0s
+- sampled frames across the rest of the video
 - technical validation summary
 - expected ad brief
 
@@ -658,6 +689,7 @@ Return strict JSON with this exact shape:
   "verdict": "pass|revise|fail",
   "checks": {{
     "human_present": true,
+    "opening_has_wearer": true,
     "active_demonstration": true,
     "story_present": true,
     "message_present": true,
@@ -683,11 +715,13 @@ Return strict JSON with this exact shape:
 
 Evaluation rules:
 - human_present: true only if a visible person or believable wearer/user appears in a meaningful way.
+- opening_has_wearer: true only if the opening frame already contains a visible wearer. A product-only or mannequin-only opening means false.
 - active_demonstration: true only if the product is demonstrated through action, use, styling, or clear motion beyond passive pan/zoom over a static subject.
 - story_present: true only if the sequence implies hook -> proof -> payoff or another clear advertising progression.
 - message_present: true only if the viewer can infer the intended selling angle or benefit.
 - cta_present: true only if the ending lands with a clear action or conversion prompt.
 - product_truth_pass: true only if the product remains faithful to the source image.
+- If CTA mode is external-overlay, a missing visible in-video CTA can be noted as a weakness but should not block an otherwise good candidate.
 - If any required check is missing, include a concrete statement in blocking_failures.
 - If you are uncertain about a required check, set it to false.
 - Do not use markdown fences. Output JSON only.
@@ -700,6 +734,7 @@ payload = {
             "parts": [
                 {"text": prompt},
                 inline_part(source_image),
+                inline_part(frame_open),
                 inline_part(frame_a),
                 inline_part(frame_b),
                 inline_part(frame_c),
@@ -717,9 +752,10 @@ cli_prompt = f"""{prompt}
 
 Local workspace files to inspect:
 - source image: {source_image}
-- frame 0.5s: {frame_a}
-- frame 2.5s: {frame_b}
-- frame 4.5s: {frame_c}
+- opening frame 0.0s: {frame_open}
+- early frame: {frame_a}
+- middle frame: {frame_b}
+- late frame: {frame_c}
 - technical validation json: {technical_json}
 
 Inspect those local files and return JSON only.
@@ -759,7 +795,7 @@ PY_PROMPT
 			fi
 		fi
 
-		if python3 - "$RAW_RESPONSE" "$REVIEW_JSON" "$NORMALIZED_JSON" "$TECH_JSON" "$VIDEO_PATH" "$TECH_EXIT" "$BACKEND" "$REVIEW_STDERR" "$ATTEMPTED_CSV" "$ERRORS_JOINED" "$REQUIRE_HUMAN" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_REVIEW'
+		if python3 - "$RAW_RESPONSE" "$REVIEW_JSON" "$NORMALIZED_JSON" "$TECH_JSON" "$VIDEO_PATH" "$TECH_EXIT" "$BACKEND" "$REVIEW_STDERR" "$ATTEMPTED_CSV" "$ERRORS_JOINED" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_REVIEW'
 from pathlib import Path
 import json
 import re
@@ -776,10 +812,11 @@ stderr_path = sys.argv[8]
 attempted_csv = sys.argv[9]
 errors_joined = sys.argv[10]
 require_human = sys.argv[11] == "true"
-require_active_demo = sys.argv[12] == "true"
-require_story = sys.argv[13] == "true"
-require_message = sys.argv[14] == "true"
-require_cta = sys.argv[15] == "true"
+require_opening_wearer = sys.argv[12] == "true"
+require_active_demo = sys.argv[13] == "true"
+require_story = sys.argv[14] == "true"
+require_message = sys.argv[15] == "true"
+require_cta = sys.argv[16] == "true"
 
 
 def strip_ansi(text: str) -> str:
@@ -849,6 +886,7 @@ scores = review.get("scores", {}) if isinstance(review.get("scores"), dict) else
 
 normalized_checks = {
     "human_present": bool(checks.get("human_present", False)),
+    "opening_has_wearer": bool(checks.get("opening_has_wearer", False)),
     "active_demonstration": bool(checks.get("active_demonstration", False)),
     "story_present": bool(checks.get("story_present", False)),
     "message_present": bool(checks.get("message_present", False)),
@@ -858,6 +896,7 @@ normalized_checks = {
 
 required_checks = {
     "human_present": require_human,
+    "opening_has_wearer": require_opening_wearer,
     "active_demonstration": require_active_demo,
     "story_present": require_story,
     "message_present": require_message,
@@ -933,7 +972,7 @@ PY_REVIEW
 		if [[ "${#BACKEND_ERRORS[@]}" -gt 0 ]]; then
 			ERRORS_JOINED="$(printf '%s\n' "${BACKEND_ERRORS[@]}" | paste -sd'|' -)"
 		fi
-		python3 - "$REVIEW_JSON" "$NORMALIZED_JSON" "$TECH_JSON" "$VIDEO_PATH" "$TECH_EXIT" "$ATTEMPTED_CSV" "$ERRORS_JOINED" "$REQUIRE_HUMAN" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_REVIEW_FAIL'
+		python3 - "$REVIEW_JSON" "$NORMALIZED_JSON" "$TECH_JSON" "$VIDEO_PATH" "$TECH_EXIT" "$ATTEMPTED_CSV" "$ERRORS_JOINED" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_REVIEW_FAIL'
 from pathlib import Path
 import json
 import sys
@@ -946,10 +985,11 @@ tech_exit = int(sys.argv[5])
 attempted_csv = sys.argv[6]
 errors_joined = sys.argv[7]
 require_human = sys.argv[8] == "true"
-require_active_demo = sys.argv[9] == "true"
-require_story = sys.argv[10] == "true"
-require_message = sys.argv[11] == "true"
-require_cta = sys.argv[12] == "true"
+require_opening_wearer = sys.argv[9] == "true"
+require_active_demo = sys.argv[10] == "true"
+require_story = sys.argv[11] == "true"
+require_message = sys.argv[12] == "true"
+require_cta = sys.argv[13] == "true"
 
 with technical_json.open() as fh:
     technical = json.load(fh)
@@ -958,6 +998,7 @@ review = {
     "verdict": "fail",
     "checks": {
         "human_present": False,
+        "opening_has_wearer": False,
         "active_demonstration": False,
         "story_present": False,
         "message_present": False,
@@ -998,6 +1039,7 @@ normalized = {
     "blockingFailures": ["review_backend_failed"],
     "requiredChecks": {
         "human_present": require_human,
+        "opening_has_wearer": require_opening_wearer,
         "active_demonstration": require_active_demo,
         "story_present": require_story,
         "message_present": require_message,

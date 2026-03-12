@@ -12,6 +12,7 @@
 		"test:watch": "vitest",
 		"loop:research": "tsx scripts/research-driven-loop.ts",
 		"smoke:gemini:image": "tsx scripts/test-imagen-smoke.ts",
+		"smoke:gemini:composite": "tsx scripts/test-gemini-composite-smoke.ts",
 		"smoke:gemini:video": "tsx scripts/test-veo-pipeline.ts",
 		"validate:agentic:curl": "bash scripts/validate-agentic-job.sh",
 		"validate:agentic:smoke": "node scripts/agentic-smoke-test.mjs",

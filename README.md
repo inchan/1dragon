@@ -133,6 +133,14 @@ pnpm media:smoke:image -- \
   --aspect-ratio 9:16
 ```
 
+착장 composite smoke:
+
+```bash
+pnpm media:smoke:composite -- \
+  --image /absolute/path/to/product-image.png \
+  --persona-brief "A real adult woman wearing the exact garment in a premium boutique studio, full body, confident pose"
+```
+
 비디오 생성 smoke:
 
 ```bash
@@ -145,9 +153,29 @@ pnpm media:smoke:video -- \
 
 필수 환경 변수:
 - `GEMINI_IMAGEN_API_KEY` 또는 `GEMINI_VEO_API_KEY` for image smoke
+- `GEMINI_API_KEY` 또는 `GEMINI_VEO_API_KEY` for composite smoke
 - `GEMINI_VEO_API_KEY` for video smoke
 
 이 smoke 경로는 provider 호출 자체를 검증합니다. 인증, DB, Redis, S3, worker orchestration까지 포함한 full-stack 성공을 의미하지는 않습니다.
+
+## Composite-first 숏폼 테스트 플로우
+
+패션 상품처럼 `product-only -> Veo`가 부자연스러운 경우에는 composite-first 플로우를 사용합니다.
+이 경로는 `상품 이미지 -> Gemini composite image -> Veo 8초 영상 -> Gemini ad review` 순서로 실행됩니다.
+
+```bash
+pnpm media:smoke:shortform -- \
+  --image /absolute/path/to/product-image.png \
+  --hook "첫 장면부터 시선 정지" \
+  --message "핏과 실루엣이 바로 보이는 원피스" \
+  --cta "지금 코디 확인" \
+  --cta-mode external-overlay
+```
+
+기본값:
+- 8초 Veo
+- wearer-first opening 요구
+- `cta-mode external-overlay`
 
 ## Gemini 광고 리뷰 루프
 
@@ -168,11 +196,15 @@ pnpm media:review:gemini -- \
 핵심 옵션:
 - `--review-backend api|cli|cli-then-api`
 - `--hook`, `--message`, `--cta`, `--audience`
+- `--cta-mode in-video|external-overlay`
+- `--allow-product-only-opening`
 - `--allow-no-human`, `--allow-passive-demo`, `--allow-no-story`, `--allow-no-message`, `--allow-no-cta`
 
 운영 권장:
 - 기본 게이트는 `api`를 사용합니다. 검증 중 같은 샘플에서 `cli` 평가는 더 흔들릴 수 있었습니다.
 - `cli` 또는 `cli-then-api`는 로컬 연구/탐색용 reviewer로 두고, 최종 pass/fail 판정은 API 결과를 우선합니다.
+- 패션 광고 테스트에서는 `product-only` 첫 프레임보다 `wearer-first composite`를 우선합니다.
+- CTA를 후처리 오버레이로 넣을 계획이면 `--cta-mode external-overlay`를 사용합니다.
 
 산출물:
 - `artifacts/gemini-review-loop/<run-id>/loop-summary.json`

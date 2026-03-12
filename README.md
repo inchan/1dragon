@@ -170,6 +170,10 @@ pnpm media:review:gemini -- \
 - `--hook`, `--message`, `--cta`, `--audience`
 - `--allow-no-human`, `--allow-passive-demo`, `--allow-no-story`, `--allow-no-message`, `--allow-no-cta`
 
+운영 권장:
+- 기본 게이트는 `api`를 사용합니다. 검증 중 같은 샘플에서 `cli` 평가는 더 흔들릴 수 있었습니다.
+- `cli` 또는 `cli-then-api`는 로컬 연구/탐색용 reviewer로 두고, 최종 pass/fail 판정은 API 결과를 우선합니다.
+
 산출물:
 - `artifacts/gemini-review-loop/<run-id>/loop-summary.json`
 - `artifacts/gemini-review-loop/<run-id>/loop-summary.md`

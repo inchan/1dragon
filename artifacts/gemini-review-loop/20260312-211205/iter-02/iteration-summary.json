@@ -1,0 +1,35 @@
+{
+  "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-wearable-2026-02-20T17-22-00.mp4",
+  "technicalPassed": true,
+  "technicalExitCode": 0,
+  "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-02/technical-validation.json",
+  "geminiVerdict": "revise",
+  "averageGeminiScore": 5.0,
+  "combinedScore": 60.0,
+  "scores": {
+    "opening_hook": 2,
+    "product_truth": 9,
+    "scene_diversity": 7,
+    "narrative_clarity": 5,
+    "cta_clarity": 1,
+    "visual_quality": 6
+  },
+  "oneSentenceSummary": "This video accurately showcases the product on a model but suffers from a weak opening, basic narrative, and a non-existent call to action due to placeholder text.",
+  "strengths": [
+    "The product is accurately represented and consistent with the source image.",
+    "The video effectively shows the dress on a model from different angles.",
+    "Visual quality of the product and model is good."
+  ],
+  "weaknesses": [
+    "The opening hook is weak, starting with a static product image.",
+    "The video ends with confusing placeholder text (\"scno sontont\") instead of a clear call to action.",
+    "The narrative progression is very basic, lacking a compelling story or proof beat.",
+    "Overall visual quality is diminished by the unprofessional placeholder text."
+  ],
+  "improvements": [
+    "Implement a more dynamic opening shot to immediately capture viewer attention.",
+    "Replace the placeholder text with a clear, concise, and actionable call to action (e.g., \"Shop Now\", \"Discover More\").",
+    "Develop a more engaging narrative, perhaps by showing the product in a lifestyle context or highlighting key features.",
+    "Consider adding subtle text overlays throughout the video to reinforce product benefits or brand messaging."
+  ]
+}

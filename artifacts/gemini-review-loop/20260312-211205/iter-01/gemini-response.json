@@ -1,0 +1,34 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"verdict\": \"revise\",\n  \"scores\": {\n    \"opening_hook\": 3,\n    \"product_truth\": 10,\n    \"scene_diversity\": 2,\n    \"narrative_clarity\": 2,\n    \"cta_clarity\": 1,\n    \"visual_quality\": 7\n  },\n  \"one_sentence_summary\": \"This video accurately showcases the product on a model but lacks dynamic content, scene diversity, and a clear narrative or call to action.\",\n  \"strengths\": [\n    \"The product is accurately represented and matches the source image perfectly.\",\n    \"The visual quality is clean and the product is clearly visible on the model.\"\n  ],\n  \"weaknesses\": [\n    \"The opening hook is weak, featuring a static pose with no immediate engagement.\",\n    \"There is very little scene diversity, with most frames showing the model in nearly identical static poses.\",\n    \"The video lacks a clear narrative or story progression, feeling more like a series of still images.\",\n    \"No call to action or clear closing point is evident in the sampled frames.\",\n    \"The overall presentation is static and lacks dynamic movement or varied camera angles.\"\n  ],\n  \"improvements\": [\n    \"Introduce a more engaging opening hook, such as a close-up on fabric detail, a quick transition, or a dynamic pose.\",\n    \"Increase scene diversity by incorporating more varied poses, movement (e.g., walking, spinning), and different camera angles.\",\n    \"Develop a simple narrative or proof beat, perhaps showing the dress in different contexts or highlighting its features through movement.\",\n    \"Add a clear call to action (CTA) at the end of the video, such as 'Shop Now' or 'Learn More'.\",\n    \"Consider adding subtle background elements or music to enhance the overall appeal and engagement.\"\n  ]\n}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 1703,
+    "candidatesTokenCount": 409,
+    "totalTokenCount": 2945,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 671
+      },
+      {
+        "modality": "IMAGE",
+        "tokenCount": 1032
+      }
+    ],
+    "thoughtsTokenCount": 833
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "l62yaa3UM6qW0-kPx9yZwQw"
+}

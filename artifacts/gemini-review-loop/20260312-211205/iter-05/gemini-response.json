@@ -1,0 +1,34 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"verdict\": \"revise\",\n  \"scores\": {\n    \"opening_hook\": 4,\n    \"product_truth\": 9,\n    \"scene_diversity\": 7,\n    \"narrative_clarity\": 5,\n    \"cta_clarity\": 2,\n    \"visual_quality\": 8\n  },\n  \"one_sentence_summary\": \"A clean product showcase video that accurately displays the dress on a model, but lacks an engaging opening, clear narrative, and call to action.\",\n  \"strengths\": [\n    \"Accurate representation of the product from the source image.\",\n    \"Good visual quality with clear, well-lit shots on a clean background.\",\n    \"Effectively shows the product being worn on a model from multiple angles.\"\n  ],\n  \"weaknesses\": [\n    \"The opening frame is a static shot of the dress, lacking an immediate hook or motion.\",\n    \"The narrative progression is basic, primarily showing the product and then the model turning, without a clear story or proof beat.\",\n    \"No explicit call to action or strong closing point is evident in the sampled frames.\",\n    \"Could benefit from more dynamic poses or styling to enhance engagement.\"\n  ],\n  \"improvements\": [\n    \"Introduce the video with a more dynamic shot, perhaps with the model in motion or a close-up of a key feature.\",\n    \"Develop a clearer narrative arc, such as showcasing different ways to style the dress or highlighting its comfort/fit.\",\n    \"Integrate a clear and compelling call to action (CTA) at the end of the video, such as 'Shop Now' or 'Discover More'.\",\n    \"Consider adding subtle text overlays or background music to enhance the storytelling and overall viewer experience.\"\n  ]\n}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 1707,
+    "candidatesTokenCount": 388,
+    "totalTokenCount": 2916,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 675
+      },
+      {
+        "modality": "IMAGE",
+        "tokenCount": 1032
+      }
+    ],
+    "thoughtsTokenCount": 821
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "wK2yacCVJbGpvr0P7OLYsAI"
+}

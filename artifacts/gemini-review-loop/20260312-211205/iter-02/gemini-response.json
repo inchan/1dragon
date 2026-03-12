@@ -1,0 +1,34 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"verdict\": \"revise\",\n  \"scores\": {\n    \"opening_hook\": 2,\n    \"product_truth\": 9,\n    \"scene_diversity\": 7,\n    \"narrative_clarity\": 5,\n    \"cta_clarity\": 1,\n    \"visual_quality\": 6\n  },\n  \"one_sentence_summary\": \"This video accurately showcases the product on a model but suffers from a weak opening, basic narrative, and a non-existent call to action due to placeholder text.\",\n  \"strengths\": [\n    \"The product is accurately represented and consistent with the source image.\",\n    \"The video effectively shows the dress on a model from different angles.\",\n    \"Visual quality of the product and model is good.\"\n  ],\n  \"weaknesses\": [\n    \"The opening hook is weak, starting with a static product image.\",\n    \"The video ends with confusing placeholder text (\\\"scno sontont\\\") instead of a clear call to action.\",\n    \"The narrative progression is very basic, lacking a compelling story or proof beat.\",\n    \"Overall visual quality is diminished by the unprofessional placeholder text.\"\n  ],\n  \"improvements\": [\n    \"Implement a more dynamic opening shot to immediately capture viewer attention.\",\n    \"Replace the placeholder text with a clear, concise, and actionable call to action (e.g., \\\"Shop Now\\\", \\\"Discover More\\\").\",\n    \"Develop a more engaging narrative, perhaps by showing the product in a lifestyle context or highlighting key features.\",\n    \"Consider adding subtle text overlays throughout the video to reinforce product benefits or brand messaging.\"\n  ]\n}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 1703,
+    "candidatesTokenCount": 360,
+    "totalTokenCount": 3028,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 671
+      },
+      {
+        "modality": "IMAGE",
+        "tokenCount": 1032
+      }
+    ],
+    "thoughtsTokenCount": 965
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "oa2yaeyoBLe6vr0PxeqtwAU"
+}

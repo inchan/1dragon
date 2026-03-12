@@ -1,0 +1,44 @@
+{
+  "stages": [
+    {
+      "id": "video-review-loop",
+      "classification": "direct-provider",
+      "reason": "This run validates local media files through validate-media, ffmpeg, and Gemini directly."
+    },
+    {
+      "id": "products-analyze-api",
+      "classification": "stubbed",
+      "reason": "The current products/analyze path uses stub-backed vision adapters and cannot be claimed as live provider-backed analysis."
+    },
+    {
+      "id": "media-jobs-api",
+      "classification": "blocked",
+      "reason": "Missing prerequisites: SESSION_COOKIE; Unreachable services: DATABASE_URL@localhost:5432, REDIS_URL@localhost:6379, S3_ENDPOINT@localhost:9000"
+    },
+    {
+      "id": "model-composite-api",
+      "classification": "blocked",
+      "reason": "This path still depends on auth, DB runtime, and valid preset IDs; it is not exercised by the direct-provider loop."
+    }
+  ],
+  "missingFullStackPrerequisites": [
+    "SESSION_COOKIE"
+  ],
+  "unreachableServices": [
+    {
+      "name": "DATABASE_URL",
+      "host": "localhost",
+      "port": 5432
+    },
+    {
+      "name": "REDIS_URL",
+      "host": "localhost",
+      "port": 6379
+    },
+    {
+      "name": "S3_ENDPOINT",
+      "host": "localhost",
+      "port": 9000
+    }
+  ]
+}

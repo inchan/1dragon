@@ -1,0 +1,36 @@
+{
+  "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-wearable-2026-02-20T17-33-07.mp4",
+  "technicalPassed": true,
+  "technicalExitCode": 0,
+  "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-01/technical-validation.json",
+  "geminiVerdict": "revise",
+  "averageGeminiScore": 4.17,
+  "combinedScore": 51.7,
+  "scores": {
+    "opening_hook": 3,
+    "product_truth": 10,
+    "scene_diversity": 2,
+    "narrative_clarity": 2,
+    "cta_clarity": 1,
+    "visual_quality": 7
+  },
+  "oneSentenceSummary": "This video accurately showcases the product on a model but lacks dynamic content, scene diversity, and a clear narrative or call to action.",
+  "strengths": [
+    "The product is accurately represented and matches the source image perfectly.",
+    "The visual quality is clean and the product is clearly visible on the model."
+  ],
+  "weaknesses": [
+    "The opening hook is weak, featuring a static pose with no immediate engagement.",
+    "There is very little scene diversity, with most frames showing the model in nearly identical static poses.",
+    "The video lacks a clear narrative or story progression, feeling more like a series of still images.",
+    "No call to action or clear closing point is evident in the sampled frames.",
+    "The overall presentation is static and lacks dynamic movement or varied camera angles."
+  ],
+  "improvements": [
+    "Introduce a more engaging opening hook, such as a close-up on fabric detail, a quick transition, or a dynamic pose.",
+    "Increase scene diversity by incorporating more varied poses, movement (e.g., walking, spinning), and different camera angles.",
+    "Develop a simple narrative or proof beat, perhaps showing the dress in different contexts or highlighting its features through movement.",
+    "Add a clear call to action (CTA) at the end of the video, such as 'Shop Now' or 'Learn More'.",
+    "Consider adding subtle background elements or music to enhance the overall appeal and engagement."
+  ]
+}

@@ -1,0 +1,342 @@
+{
+  "iterationCount": 5,
+  "runManifestPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/run-manifest.json",
+  "sourceImagePath": "/Users/inchan/Downloads/fashion-001.png",
+  "sourceImageCopyPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/source-image.png",
+  "candidateVideos": [
+    "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-wearable-2026-02-20T17-33-07.mp4",
+    "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-wearable-2026-02-20T17-22-00.mp4",
+    "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-trend-challenge-2026-02-20T18-07-13.mp4",
+    "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-seongsu-highmodel-2026-02-20T18-09-17.mp4",
+    "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-korean-real-2026-02-20T17-44-34.mp4"
+  ],
+  "stageClassificationPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/stage-classification.json",
+  "stageClassification": [
+    {
+      "id": "video-review-loop",
+      "classification": "direct-provider",
+      "reason": "This run validates local media files through validate-media, ffmpeg, and Gemini directly."
+    },
+    {
+      "id": "products-analyze-api",
+      "classification": "stubbed",
+      "reason": "The current products/analyze path uses stub-backed vision adapters and cannot be claimed as live provider-backed analysis."
+    },
+    {
+      "id": "media-jobs-api",
+      "classification": "blocked",
+      "reason": "Missing prerequisites: SESSION_COOKIE; Unreachable services: DATABASE_URL@localhost:5432, REDIS_URL@localhost:6379, S3_ENDPOINT@localhost:9000"
+    },
+    {
+      "id": "model-composite-api",
+      "classification": "blocked",
+      "reason": "This path still depends on auth, DB runtime, and valid preset IDs; it is not exercised by the direct-provider loop."
+    }
+  ],
+  "missingFullStackPrerequisites": [
+    "SESSION_COOKIE"
+  ],
+  "unreachableServices": [
+    {
+      "name": "DATABASE_URL",
+      "host": "localhost",
+      "port": 5432
+    },
+    {
+      "name": "REDIS_URL",
+      "host": "localhost",
+      "port": 6379
+    },
+    {
+      "name": "S3_ENDPOINT",
+      "host": "localhost",
+      "port": 9000
+    }
+  ],
+  "best": {
+    "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-seongsu-highmodel-2026-02-20T18-09-17.mp4",
+    "technicalPassed": true,
+    "technicalExitCode": 0,
+    "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-04/technical-validation.json",
+    "geminiVerdict": "pass",
+    "averageGeminiScore": 8.17,
+    "combinedScore": 91.7,
+    "scores": {
+      "opening_hook": 8,
+      "product_truth": 10,
+      "scene_diversity": 7,
+      "narrative_clarity": 8,
+      "cta_clarity": 7,
+      "visual_quality": 9
+    },
+    "oneSentenceSummary": "A high-quality vertical video effectively showcasing a plaid slip dress with an engaging opening and clear fashion narrative.",
+    "strengths": [
+      "The product in the video is an excellent match to the source image, ensuring product truth.",
+      "The opening frame immediately engages the viewer with a model walking, implying motion and interest.",
+      "Visual quality, composition, and realism are high, making for a professional-looking ad.",
+      "The video clearly tells a story of showcasing an outfit of the day (OOTD)."
+    ],
+    "weaknesses": [
+      "The call to action (CTA) or closing point, while present with text overlays, might not be universally clear without translation.",
+      "While there is progression, the scene diversity could be enhanced with more varied backgrounds or camera angles beyond the street setting."
+    ],
+    "improvements": [
+      "To broaden appeal, consider adding universal icons or translated text for the call to action.",
+      "Explore incorporating additional diverse settings or dynamic camera movements to further enrich scene diversity."
+    ],
+    "iteration": "iter-04"
+  },
+  "ranked": [
+    {
+      "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-seongsu-highmodel-2026-02-20T18-09-17.mp4",
+      "technicalPassed": true,
+      "technicalExitCode": 0,
+      "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-04/technical-validation.json",
+      "geminiVerdict": "pass",
+      "averageGeminiScore": 8.17,
+      "combinedScore": 91.7,
+      "scores": {
+        "opening_hook": 8,
+        "product_truth": 10,
+        "scene_diversity": 7,
+        "narrative_clarity": 8,
+        "cta_clarity": 7,
+        "visual_quality": 9
+      },
+      "oneSentenceSummary": "A high-quality vertical video effectively showcasing a plaid slip dress with an engaging opening and clear fashion narrative.",
+      "strengths": [
+        "The product in the video is an excellent match to the source image, ensuring product truth.",
+        "The opening frame immediately engages the viewer with a model walking, implying motion and interest.",
+        "Visual quality, composition, and realism are high, making for a professional-looking ad.",
+        "The video clearly tells a story of showcasing an outfit of the day (OOTD)."
+      ],
+      "weaknesses": [
+        "The call to action (CTA) or closing point, while present with text overlays, might not be universally clear without translation.",
+        "While there is progression, the scene diversity could be enhanced with more varied backgrounds or camera angles beyond the street setting."
+      ],
+      "improvements": [
+        "To broaden appeal, consider adding universal icons or translated text for the call to action.",
+        "Explore incorporating additional diverse settings or dynamic camera movements to further enrich scene diversity."
+      ],
+      "iteration": "iter-04"
+    },
+    {
+      "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-trend-challenge-2026-02-20T18-07-13.mp4",
+      "technicalPassed": true,
+      "technicalExitCode": 0,
+      "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-03/technical-validation.json",
+      "geminiVerdict": "revise",
+      "averageGeminiScore": 7.17,
+      "combinedScore": 81.7,
+      "scores": {
+        "opening_hook": 7,
+        "product_truth": 10,
+        "scene_diversity": 5,
+        "narrative_clarity": 4,
+        "cta_clarity": 9,
+        "visual_quality": 8
+      },
+      "oneSentenceSummary": "A short product video showcasing a plaid dress on a model within a social media interface, but lacking dynamic scene changes or a compelling narrative.",
+      "strengths": [
+        "Accurate product representation matching the source image.",
+        "Clear call to action button visible in the later frames.",
+        "Good visual quality, composition, and readability of text/UI elements."
+      ],
+      "weaknesses": [
+        "Limited scene diversity with the model remaining static for a significant portion of the video.",
+        "Weak narrative progression, primarily showing the product then the model wearing it without further development.",
+        "The opening hook, while implying interaction, lacks strong motion or tension to immediately grab attention."
+      ],
+      "improvements": [
+        "Introduce more dynamic poses or movement from the model to enhance scene diversity and engagement.",
+        "Develop a clearer narrative, potentially addressing the questions posed in the opening frame or showcasing different styling options.",
+        "Vary the background or setting to provide more visual interest and progression.",
+        "Incorporate more engaging motion or a stronger visual element in the opening to improve the hook."
+      ],
+      "iteration": "iter-03"
+    },
+    {
+      "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-korean-real-2026-02-20T17-44-34.mp4",
+      "technicalPassed": true,
+      "technicalExitCode": 0,
+      "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-05/technical-validation.json",
+      "geminiVerdict": "revise",
+      "averageGeminiScore": 5.83,
+      "combinedScore": 68.3,
+      "scores": {
+        "opening_hook": 4,
+        "product_truth": 9,
+        "scene_diversity": 7,
+        "narrative_clarity": 5,
+        "cta_clarity": 2,
+        "visual_quality": 8
+      },
+      "oneSentenceSummary": "A clean product showcase video that accurately displays the dress on a model, but lacks an engaging opening, clear narrative, and call to action.",
+      "strengths": [
+        "Accurate representation of the product from the source image.",
+        "Good visual quality with clear, well-lit shots on a clean background.",
+        "Effectively shows the product being worn on a model from multiple angles."
+      ],
+      "weaknesses": [
+        "The opening frame is a static shot of the dress, lacking an immediate hook or motion.",
+        "The narrative progression is basic, primarily showing the product and then the model turning, without a clear story or proof beat.",
+        "No explicit call to action or strong closing point is evident in the sampled frames.",
+        "Could benefit from more dynamic poses or styling to enhance engagement."
+      ],
+      "improvements": [
+        "Introduce the video with a more dynamic shot, perhaps with the model in motion or a close-up of a key feature.",
+        "Develop a clearer narrative arc, such as showcasing different ways to style the dress or highlighting its comfort/fit.",
+        "Integrate a clear and compelling call to action (CTA) at the end of the video, such as 'Shop Now' or 'Discover More'.",
+        "Consider adding subtle text overlays or background music to enhance the storytelling and overall viewer experience."
+      ],
+      "iteration": "iter-05"
+    },
+    {
+      "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-wearable-2026-02-20T17-22-00.mp4",
+      "technicalPassed": true,
+      "technicalExitCode": 0,
+      "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-02/technical-validation.json",
+      "geminiVerdict": "revise",
+      "averageGeminiScore": 5.0,
+      "combinedScore": 60.0,
+      "scores": {
+        "opening_hook": 2,
+        "product_truth": 9,
+        "scene_diversity": 7,
+        "narrative_clarity": 5,
+        "cta_clarity": 1,
+        "visual_quality": 6
+      },
+      "oneSentenceSummary": "This video accurately showcases the product on a model but suffers from a weak opening, basic narrative, and a non-existent call to action due to placeholder text.",
+      "strengths": [
+        "The product is accurately represented and consistent with the source image.",
+        "The video effectively shows the dress on a model from different angles.",
+        "Visual quality of the product and model is good."
+      ],
+      "weaknesses": [
+        "The opening hook is weak, starting with a static product image.",
+        "The video ends with confusing placeholder text (\"scno sontont\") instead of a clear call to action.",
+        "The narrative progression is very basic, lacking a compelling story or proof beat.",
+        "Overall visual quality is diminished by the unprofessional placeholder text."
+      ],
+      "improvements": [
+        "Implement a more dynamic opening shot to immediately capture viewer attention.",
+        "Replace the placeholder text with a clear, concise, and actionable call to action (e.g., \"Shop Now\", \"Discover More\").",
+        "Develop a more engaging narrative, perhaps by showing the product in a lifestyle context or highlighting key features.",
+        "Consider adding subtle text overlays throughout the video to reinforce product benefits or brand messaging."
+      ],
+      "iteration": "iter-02"
+    },
+    {
+      "videoPath": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-wearable-2026-02-20T17-33-07.mp4",
+      "technicalPassed": true,
+      "technicalExitCode": 0,
+      "technicalReportPath": "/Users/inchan/workspace/1dragon/artifacts/gemini-review-loop/20260312-211205/iter-01/technical-validation.json",
+      "geminiVerdict": "revise",
+      "averageGeminiScore": 4.17,
+      "combinedScore": 51.7,
+      "scores": {
+        "opening_hook": 3,
+        "product_truth": 10,
+        "scene_diversity": 2,
+        "narrative_clarity": 2,
+        "cta_clarity": 1,
+        "visual_quality": 7
+      },
+      "oneSentenceSummary": "This video accurately showcases the product on a model but lacks dynamic content, scene diversity, and a clear narrative or call to action.",
+      "strengths": [
+        "The product is accurately represented and matches the source image perfectly.",
+        "The visual quality is clean and the product is clearly visible on the model."
+      ],
+      "weaknesses": [
+        "The opening hook is weak, featuring a static pose with no immediate engagement.",
+        "There is very little scene diversity, with most frames showing the model in nearly identical static poses.",
+        "The video lacks a clear narrative or story progression, feeling more like a series of still images.",
+        "No call to action or clear closing point is evident in the sampled frames.",
+        "The overall presentation is static and lacks dynamic movement or varied camera angles."
+      ],
+      "improvements": [
+        "Introduce a more engaging opening hook, such as a close-up on fabric detail, a quick transition, or a dynamic pose.",
+        "Increase scene diversity by incorporating more varied poses, movement (e.g., walking, spinning), and different camera angles.",
+        "Develop a simple narrative or proof beat, perhaps showing the dress in different contexts or highlighting its features through movement.",
+        "Add a clear call to action (CTA) at the end of the video, such as 'Shop Now' or 'Learn More'.",
+        "Consider adding subtle background elements or music to enhance the overall appeal and engagement."
+      ],
+      "iteration": "iter-01"
+    }
+  ],
+  "commonWeaknesses": [
+    {
+      "statement": "Could benefit from more dynamic poses or styling to enhance engagement.",
+      "count": 1
+    },
+    {
+      "statement": "Limited scene diversity with the model remaining static for a significant portion of the video.",
+      "count": 1
+    },
+    {
+      "statement": "No call to action or clear closing point is evident in the sampled frames.",
+      "count": 1
+    },
+    {
+      "statement": "No explicit call to action or strong closing point is evident in the sampled frames.",
+      "count": 1
+    },
+    {
+      "statement": "Overall visual quality is diminished by the unprofessional placeholder text.",
+      "count": 1
+    },
+    {
+      "statement": "The call to action (CTA) or closing point, while present with text overlays, might not be universally clear without translation.",
+      "count": 1
+    },
+    {
+      "statement": "The narrative progression is basic, primarily showing the product and then the model turning, without a clear story or proof beat.",
+      "count": 1
+    },
+    {
+      "statement": "The narrative progression is very basic, lacking a compelling story or proof beat.",
+      "count": 1
+    },
+    {
+      "statement": "The opening frame is a static shot of the dress, lacking an immediate hook or motion.",
+      "count": 1
+    },
+    {
+      "statement": "The opening hook is weak, featuring a static pose with no immediate engagement.",
+      "count": 1
+    },
+    {
+      "statement": "The opening hook is weak, starting with a static product image.",
+      "count": 1
+    },
+    {
+      "statement": "The opening hook, while implying interaction, lacks strong motion or tension to immediately grab attention.",
+      "count": 1
+    },
+    {
+      "statement": "The overall presentation is static and lacks dynamic movement or varied camera angles.",
+      "count": 1
+    },
+    {
+      "statement": "The video ends with confusing placeholder text (\"scno sontont\") instead of a clear call to action.",
+      "count": 1
+    },
+    {
+      "statement": "The video lacks a clear narrative or story progression, feeling more like a series of still images.",
+      "count": 1
+    },
+    {
+      "statement": "There is very little scene diversity, with most frames showing the model in nearly identical static poses.",
+      "count": 1
+    },
+    {
+      "statement": "Weak narrative progression, primarily showing the product then the model wearing it without further development.",
+      "count": 1
+    },
+    {
+      "statement": "While there is progression, the scene diversity could be enhanced with more varied backgrounds or camera angles beyond the street setting.",
+      "count": 1
+    }
+  ]
+}

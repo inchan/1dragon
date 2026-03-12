@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-03-12T12:12:15.279Z",
+  "image": {
+    "path": "/Users/inchan/Downloads/fashion-001.png",
+    "extension": ".png",
+    "checks": {
+      "exists": true,
+      "readable": true,
+      "nonEmpty": true,
+      "extension": true,
+      "metadata": true,
+      "dimensions": true
+    },
+    "metrics": {
+      "sizeBytes": 1915019,
+      "width": 1086,
+      "height": 1456
+    }
+  },
+  "video": {
+    "path": "/Users/inchan/workspace/1dragon/apps/api/scripts/output/fashion-001-veo-wearable-2026-02-20T17-22-00.mp4",
+    "extension": ".mp4",
+    "checks": {
+      "exists": true,
+      "readable": true,
+      "nonEmpty": true,
+      "extension": true,
+      "metadata": true,
+      "duration": true,
+      "resolution": true,
+      "fps": true
+    },
+    "metrics": {
+      "sizeBytes": 1200916,
+      "width": 720,
+      "height": 1280,
+      "durationSeconds": 5,
+      "fps": 24
+    }
+  },
+  "passed": true,
+  "errors": []
+}

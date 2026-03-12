@@ -120,6 +120,61 @@ npm run media:validate -- \
 npm run media:validate:latest
 ```
 
+## 직접 Gemini smoke 테스트
+
+첫 단계 검증은 전체 API/워커 런타임을 올리기 전에 Gemini provider 자체가 살아 있는지 확인하는 것입니다.
+모든 실행 결과는 `artifacts/live-media-smoke/` 아래에 저장됩니다.
+
+이미지 생성 smoke:
+
+```bash
+pnpm media:smoke:image -- \
+  --prompt "A premium ecommerce hero image of a plaid dress in a clean studio, photorealistic, soft lighting" \
+  --aspect-ratio 9:16
+```
+
+비디오 생성 smoke:
+
+```bash
+pnpm media:smoke:video -- \
+  --image /absolute/path/to/source-image.png \
+  --prompt "Create a short vertical ecommerce video from this source image. Preserve the product identity exactly." \
+  --aspect-ratio 9:16 \
+  --duration-seconds 4
+```
+
+필수 환경 변수:
+- `GEMINI_IMAGEN_API_KEY` 또는 `GEMINI_VEO_API_KEY` for image smoke
+- `GEMINI_VEO_API_KEY` for video smoke
+
+이 smoke 경로는 provider 호출 자체를 검증합니다. 인증, DB, Redis, S3, worker orchestration까지 포함한 full-stack 성공을 의미하지는 않습니다.
+
+## Gemini 광고 리뷰 루프
+
+생성된 후보 영상을 기술 통과 여부가 아니라 광고 적합성 기준으로 점검하려면 Gemini 리뷰 루프를 사용합니다.
+이 루프는 source image, sampled frames, technical validation 결과를 함께 보고 `사람 등장`, `능동 시연`, `스토리`, `메시지`, `CTA`를 fail-closed 방식으로 평가합니다.
+
+```bash
+pnpm media:review:gemini -- \
+  --image /absolute/path/to/source-image.png \
+  --video-dir apps/api/scripts/output \
+  --iterations 3 \
+  --review-backend cli-then-api \
+  --hook "첫 장면부터 시선 정지" \
+  --message "핏과 실루엣이 바로 보이는 원피스" \
+  --cta "지금 코디 확인"
+```
+
+핵심 옵션:
+- `--review-backend api|cli|cli-then-api`
+- `--hook`, `--message`, `--cta`, `--audience`
+- `--allow-no-human`, `--allow-passive-demo`, `--allow-no-story`, `--allow-no-message`, `--allow-no-cta`
+
+산출물:
+- `artifacts/gemini-review-loop/<run-id>/loop-summary.json`
+- `artifacts/gemini-review-loop/<run-id>/loop-summary.md`
+- iteration별 `technical-validation.json`, `gemini-review.json`, `iteration-summary.json`
+
 ## 피드백 루프 (확장 + 학습 + 개선)
 
 테스트 영상을 여러 버전으로 자동 생성하고, 규격/의도/표시(변화량)를 함께 점수화해서

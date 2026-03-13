@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { planStory } from '@/application/media/story-planner.js'
 import { PromptBuilder } from './prompt-builder.js'
 
 describe('PromptBuilder', () => {
@@ -80,5 +81,46 @@ describe('PromptBuilder', () => {
 			expect(prompt).toContain('Execution workflow: 리서치 -> 기획 -> 개발 -> QA.')
 			expect(prompt).toContain('Location direction: Seongsu-dong, Seoul.')
 		}
+	})
+
+	it('emits traceable shot-card debug mappings when story planning input is provided', async () => {
+		const builder = new PromptBuilder()
+		const planning = planStory({
+			jobId: 'prompt-builder-story-1',
+			inputImageUrl: 'https://cdn.example.com/product.png',
+			productCategory: 'FASHION',
+			stylePreset: 'TRENDY',
+			moods: ['TRENDY'],
+			keywords: ['원피스', '봄룩'],
+			copy: {
+				hook: '첫 장면부터 핏이 다르다',
+				description: '움직일 때 더 예쁜 실루엣',
+				cta: '지금 코디 확인',
+			},
+			targetClipCount: 3,
+		})
+		const output = await builder.build({
+			productCategory: 'FASHION',
+			moods: ['TRENDY'],
+			keywords: ['원피스', '봄룩'],
+			stylePreset: 'TRENDY',
+			copy: {
+				hook: '첫 장면부터 핏이 다르다',
+				description: '움직일 때 더 예쁜 실루엣',
+				cta: '지금 코디 확인',
+			},
+			storyBrief: planning.storyBrief,
+			selectedConcept: planning.selectedConcept,
+			shotCards: planning.shotCards,
+		})
+
+		expect(output.debug?.selectedConceptFamily).toBe(planning.selectedConcept.family)
+		expect(output.debug?.shotMappings).toHaveLength(3)
+		expect(output.debug?.shotMappings[0]?.providerSegments.runway).toContain(
+			planning.shotCards[0]!.sceneIntent,
+		)
+		expect(output.debug?.shotMappings[1]?.providerSegments.geminiVeo).toContain(
+			planning.shotCards[1]!.proofTarget,
+		)
 	})
 })

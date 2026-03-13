@@ -1,4 +1,9 @@
-import type { BuildPromptInput, BuildPromptOutput, PromptBuilderPort } from '@/domain/media/ports.js'
+import type {
+	BuildPromptInput,
+	BuildPromptOutput,
+	PromptBuilderPort,
+} from '@/domain/media/ports.js'
+import type { PromptCompileShotMapping, ShotCard } from '@/domain/media/planning.js'
 
 type StyleConfig = {
 	cameraMovement: string
@@ -105,6 +110,58 @@ function buildInfluencerNarrative(input: BuildPromptInput): string {
 	].join(' ')
 }
 
+function buildStoryPlanningNarrative(input: BuildPromptInput): string[] {
+	if (!input.storyBrief || !input.selectedConcept) {
+		return []
+	}
+
+	return [
+		`Story target viewer: ${input.storyBrief.targetViewer}.`,
+		`Story core promise: ${input.storyBrief.corePromise}.`,
+		`Story proof strategy: ${input.storyBrief.proofStrategy}.`,
+		`Story emotional payoff: ${input.storyBrief.emotionalPayoff}.`,
+		`Selected concept family: ${input.selectedConcept.family}.`,
+		`Selected concept angle: ${input.selectedConcept.angle}.`,
+		`Selected concept proof beat: ${input.selectedConcept.proofBeat}.`,
+	]
+}
+
+function buildShotCardDirective(shotCard: ShotCard): string {
+	return [
+		`Shot ${shotCard.order} ${shotCard.phase}.`,
+		`Scene intent: ${shotCard.sceneIntent}.`,
+		`Actor action: ${shotCard.actorAction}.`,
+		`Proof target: ${shotCard.proofTarget}.`,
+		`Background: ${shotCard.background}.`,
+		`Camera direction: ${shotCard.cameraDirection}.`,
+		`Payoff: ${shotCard.payoff}.`,
+		`Overlay text: ${shotCard.overlayText}.`,
+	].join(' ')
+}
+
+function buildShotMappings(input: BuildPromptInput): ReadonlyArray<PromptCompileShotMapping> {
+	if (!input.selectedConcept || !input.shotCards || input.shotCards.length === 0) {
+		return []
+	}
+
+	return input.shotCards.map((shotCard) => {
+		const directive = buildShotCardDirective(shotCard)
+		return {
+			shotCardId: shotCard.id,
+			phase: shotCard.phase,
+			sceneIntent: shotCard.sceneIntent,
+			proofTarget: shotCard.proofTarget,
+			payoff: shotCard.payoff,
+			providerSegments: {
+				runway: `RUNWAY shot plan. ${directive}`,
+				hailuo: `HAILUO shot plan. ${directive}`,
+				geminiVeo: `GEMINI shot plan. ${directive}`,
+				minimax: `MINIMAX shot plan. ${directive}`,
+			},
+		}
+	})
+}
+
 function buildBaseNarrative(input: BuildPromptInput): string {
 	const style = STYLE_CONFIGS[input.stylePreset] ?? DEFAULT_STYLE_CONFIG
 	const mood = input.moods.join(', ') || 'professional'
@@ -117,6 +174,8 @@ function buildBaseNarrative(input: BuildPromptInput): string {
 		.filter(Boolean) ?? []
 	const workflowStages =
 		input.workflowStages?.map((value) => value.trim()).filter(Boolean) ?? []
+	const storyPlanningNarrative = buildStoryPlanningNarrative(input)
+	const shotMappings = buildShotMappings(input)
 
 	return [
 		`Product category: ${input.productCategory}.`,
@@ -131,10 +190,15 @@ function buildBaseNarrative(input: BuildPromptInput): string {
 		`Product description highlight: ${input.copy.description}.`,
 		`Call to action tone: ${input.copy.cta}.`,
 		influencerNarrative,
+		...storyPlanningNarrative,
 		...(workflowStages.length > 0
 			? [`Execution workflow: ${workflowStages.join(' -> ')}.`]
 			: []),
 		...promptDirectives,
+		...shotMappings.map(
+			(mapping) =>
+				`Planned shot mapping ${mapping.shotCardId}: ${mapping.providerSegments.runway}.`,
+		),
 		categoryHint,
 		creatorUsageHint,
 		'Maintain exact product identity from source image: do not change silhouette, logo, typography, or key visual marks.',
@@ -147,12 +211,22 @@ function buildBaseNarrative(input: BuildPromptInput): string {
 export class PromptBuilder implements PromptBuilderPort {
 	public async build(input: BuildPromptInput): Promise<BuildPromptOutput> {
 		const narrative = buildBaseNarrative(input)
+		const shotMappings = buildShotMappings(input)
 
 		return {
 			runway: `RUNWAY_GEN4_TURBO. Use image reference mode. ${narrative} Motion strength medium. Output: cinematic 9:16 ecommerce short.`,
 			hailuo: `HAILUO_02 source-image workflow. ${narrative} Keep stable product geometry and cinematic motion rhythm for short-form commerce.`,
 			geminiVeo: `GEMINI_VEO multimodal image-to-video. ${narrative} Generate polished 9:16 ad clip with smooth camera choreography and strict identity preservation.`,
 			minimax: `MINIMAX_VIDEO image-to-video ad preset. ${narrative} Optimize visual clarity and conversion-focused framing for vertical short video.`,
+			...(input.selectedConcept && shotMappings.length > 0
+				? {
+					debug: {
+						storySummary: `${input.selectedConcept.family}:${input.selectedConcept.hook}`,
+						selectedConceptFamily: input.selectedConcept.family,
+						shotMappings,
+					},
+				}
+				: {}),
 		}
 	}
 }

@@ -1,4 +1,11 @@
 import type { Platform, StylePreset } from '@1dragon/shared'
+import type {
+	ConceptCandidate,
+	PromptCompilationDebug,
+	ShotCard,
+	StoryBrief,
+	StoryConceptFamily,
+} from './planning.js'
 
 export interface I2VGenerateInput {
 	readonly provider: 'RUNWAY' | 'HAILUO' | 'GEMINI_VEO' | 'MINIMAX'
@@ -45,6 +52,9 @@ export interface BuildPromptInput {
 	}
 	readonly promptDirectives?: ReadonlyArray<string>
 	readonly workflowStages?: ReadonlyArray<string>
+	readonly storyBrief?: StoryBrief
+	readonly selectedConcept?: ConceptCandidate
+	readonly shotCards?: ReadonlyArray<ShotCard>
 }
 
 export interface BuildPromptOutput {
@@ -52,6 +62,7 @@ export interface BuildPromptOutput {
 	readonly hailuo: string
 	readonly geminiVeo: string
 	readonly minimax: string
+	readonly debug?: PromptCompilationDebug
 }
 
 export interface RemoveBackgroundInput {

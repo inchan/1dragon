@@ -27,8 +27,14 @@ import {
 } from '@/features/video-output'
 import { api } from '@/lib/api'
 import {
+	AgenticMode,
+	AgenticWorkflow,
 	ProductCategory,
+	type AgenticWorkflowType,
 	type ProductCategory as ProductCategoryType,
+	StoryConceptFamily,
+	type StoryConceptFamily as StoryConceptFamilyType,
+	resolveAgenticExecutionPlan,
 	type StylePreset,
 } from '@1dragon/shared'
 import {
@@ -44,7 +50,7 @@ import {
 } from '@1dragon/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { type JSX, useCallback, useEffect, useMemo, useReducer } from 'react'
+import { type JSX, useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { type WizardStep, createInitialState, wizardReducer } from './wizard-reducer'
 
 const STEP_ORDER: ReadonlyArray<{ id: WizardStep; label: string }> = [
@@ -64,6 +70,66 @@ const STYLE_OPTIONS = [
 	{ value: 'PREMIUM', label: '프리미엄' },
 ]
 const CREATE_JOB_DEFAULT_DURATION = 15
+const STORY_CONCEPT_FAMILY_VALUES = new Set<string>(Object.values(StoryConceptFamily))
+
+function appendUniqueConceptFamilies(
+	current: ReadonlyArray<StoryConceptFamilyType>,
+	next: ReadonlyArray<StoryConceptFamilyType>,
+): StoryConceptFamilyType[] {
+	const seen = new Set<string>()
+	const merged: StoryConceptFamilyType[] = []
+
+	for (const family of [...current, ...next]) {
+		if (seen.has(family)) {
+			continue
+		}
+		seen.add(family)
+		merged.push(family)
+	}
+
+	return merged
+}
+
+function extractConceptFamiliesFromEvents(events: unknown): StoryConceptFamilyType[] {
+	if (!Array.isArray(events)) {
+		return []
+	}
+
+	const families: StoryConceptFamilyType[] = []
+
+	for (const event of events) {
+		if (!event || typeof event !== 'object') {
+			continue
+		}
+
+		const record = event as {
+			payload?: { metadata?: Record<string, unknown> }
+			metadata?: Record<string, unknown>
+		}
+		const metadata = record.payload?.metadata ?? record.metadata
+		const selectedConceptFamily = metadata?.selectedConceptFamily
+
+		if (
+			typeof selectedConceptFamily === 'string' &&
+			STORY_CONCEPT_FAMILY_VALUES.has(selectedConceptFamily)
+		) {
+			families.push(selectedConceptFamily as StoryConceptFamilyType)
+		}
+	}
+
+	return families
+}
+
+function formatAgenticWorkflowLabel(workflow: AgenticWorkflowType): string {
+	switch (workflow) {
+		case AgenticWorkflow.ORCHESTRATOR_WORKERS:
+			return 'Orchestrator-Workers'
+		case AgenticWorkflow.PROMPT_CHAIN:
+			return 'Prompt Chain'
+		default:
+			return 'Baseline'
+	}
+}
 
 function mapPlatformForApi(
 	platform: VideoPlatform,
@@ -80,11 +146,16 @@ export function VideoCreatorWizard(): JSX.Element {
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 	const personaCatalog = useMemo(() => buildPersonaCatalog(), [])
+	const recentConceptFamiliesRef = useRef<StoryConceptFamilyType[]>([])
 
 	const [state, dispatch] = useReducer(wizardReducer, INITIAL_COPY_VARIANTS, createInitialState)
 
 	const fetchAndSetVariants = useCallback(async (targetJobId: string): Promise<void> => {
 		const response = await api.getVideoJob(targetJobId)
+		recentConceptFamiliesRef.current = appendUniqueConceptFamilies(
+			recentConceptFamiliesRef.current,
+			extractConceptFamiliesFromEvents((response as { events?: unknown }).events),
+		)
 		const fetched = response.variants ?? []
 		const mapped: VideoVariantItem[] = fetched.map((v) => ({
 			platform: v.platform.toLowerCase() as VideoPlatform,
@@ -120,6 +191,10 @@ export function VideoCreatorWizard(): JSX.Element {
 				canRetry: message.payload.canRetry ?? false,
 				errorMessage: message.payload.errorMessage ?? null,
 			})
+			recentConceptFamiliesRef.current = appendUniqueConceptFamilies(
+				recentConceptFamiliesRef.current,
+				extractConceptFamiliesFromEvents([{ payload: { metadata: message.payload.metadata } }]),
+			)
 
 			if (message.payload.newStatus === 'SUCCEEDED') {
 				void fetchAndSetVariants(state.generation.jobId)
@@ -136,6 +211,10 @@ export function VideoCreatorWizard(): JSX.Element {
 		},
 		[state.generation.jobId, fetchAndSetVariants],
 	)
+
+	useEffect(() => {
+		recentConceptFamiliesRef.current = []
+	}, [state.file.previewUrl])
 
 	useJobStream({
 		jobId: state.generation.jobId,
@@ -167,6 +246,30 @@ export function VideoCreatorWizard(): JSX.Element {
 				(variant) => variant.platform === state.preview.selectedPlatform,
 			) ?? state.preview.variants[0],
 		[state.preview.selectedPlatform, state.preview.variants],
+	)
+	const activeAgenticPlan = useMemo(
+		() =>
+			resolveAgenticExecutionPlan({
+				agenticMode: AgenticMode.AUTO,
+				productCategory: state.file.category,
+				keywords: state.analysis.result?.keywords ?? [],
+				platforms: [mapPlatformForApi(state.preview.selectedPlatform)],
+				duration: CREATE_JOB_DEFAULT_DURATION,
+				autoShortformWorkflow: true,
+				skipWearableComposite:
+					!state.persona.skip && Boolean(state.persona.compositeImageUrl),
+				...(!state.persona.skip && selectedPersonaOption?.id
+					? { personaId: selectedPersonaOption.id }
+					: {}),
+			}),
+		[
+			selectedPersonaOption?.id,
+			state.analysis.result,
+			state.file.category,
+			state.persona.compositeImageUrl,
+			state.persona.skip,
+			state.preview.selectedPlatform,
+		],
 	)
 
 	useEffect(() => {
@@ -315,6 +418,12 @@ export function VideoCreatorWizard(): JSX.Element {
 				!state.persona.skip && state.persona.compositeImageUrl
 					? state.persona.compositeImageUrl
 					: analysis.originalImageUrl
+			const selectedPersonaId =
+				!state.persona.skip && selectedPersonaOption?.id
+					? selectedPersonaOption.id
+					: undefined
+			const skipWearableComposite =
+				!state.persona.skip && Boolean(state.persona.compositeImageUrl)
 
 			const jobResult = await api.createVideoJob({
 				imageUrl: effectiveImageUrl,
@@ -324,13 +433,20 @@ export function VideoCreatorWizard(): JSX.Element {
 				narration: state.style.narration.enabled,
 				subtitleStyle: state.style.subtitleStyle,
 				productCategory: state.file.category,
-				moods: [],
-				keywords: [],
+				...(selectedPersonaId ? { personaId: selectedPersonaId } : {}),
+				moods: analysis.moods,
+				keywords: analysis.keywords,
+				agenticMode: AgenticMode.AUTO,
+				autoShortformWorkflow: true,
+				skipWearableComposite,
 				copy: {
 					hook: state.style.editableCopy.hookCopy,
 					description: state.style.editableCopy.bodyCopy,
 					cta: state.style.editableCopy.ctaCopy,
 				},
+				...(recentConceptFamiliesRef.current.length > 0
+					? { recentConceptFamilies: recentConceptFamiliesRef.current }
+					: {}),
 			})
 
 			dispatch({
@@ -569,6 +685,49 @@ export function VideoCreatorWizard(): JSX.Element {
 							dispatch({ type: 'SET_SUBTITLE_STYLE', style })
 						}
 					/>
+					<Card>
+						<CardHeader>
+							<CardTitle>Agentic 전략</CardTitle>
+							<CardDescription>
+								agentic-ai-systems 패턴을 현재 생성 플로우에 맞춰 자동 선택합니다.
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-2 text-sm">
+							<p>
+								전략: <strong>{formatAgenticWorkflowLabel(activeAgenticPlan.workflow)}</strong>
+							</p>
+							<p className="text-muted-foreground">
+								소울: {activeAgenticPlan.mission.soul}
+							</p>
+							<p className="text-muted-foreground">
+								목적: {activeAgenticPlan.mission.purpose}
+							</p>
+							<p className="text-muted-foreground">{activeAgenticPlan.reasoning.join(' ')}</p>
+							<p className="text-xs text-muted-foreground">
+								단계: {activeAgenticPlan.steps.join(' -> ')}
+							</p>
+							<div className="space-y-1 text-xs text-muted-foreground">
+								<p>철학: {activeAgenticPlan.mission.philosophy.join(' / ')}</p>
+								<p>
+									목표:{' '}
+									{activeAgenticPlan.mission.goals
+										.map((goal) => `${goal.name} (${goal.successSignal})`)
+										.join(' / ')}
+								</p>
+								<p>완료 조건: {activeAgenticPlan.mission.successCriteria.join(' / ')}</p>
+							</div>
+							<p className="text-xs text-muted-foreground">
+								{activeAgenticPlan.features.shortformWorkflow
+									? '숏폼 플래너 사용'
+									: '기본 프롬프트 사용'}{' '}
+								·{' '}
+								{activeAgenticPlan.features.wearableComposite
+									? '착장 합성 사용'
+									: '원본 상품 유지'}{' '}
+								· 품질 게이트 사용
+							</p>
+						</CardContent>
+					</Card>
 					<div className="flex gap-2">
 						<Button
 							type="button"

@@ -14,7 +14,17 @@
 		"typecheck": "turbo run typecheck",
 		"format": "biome format .",
 		"format:check": "biome check .",
-		"e2e": "turbo run e2e"
+		"e2e": "turbo run e2e",
+		"media:smoke:image": "pnpm --filter @1dragon/api smoke:gemini:image",
+		"media:smoke:composite": "pnpm --filter @1dragon/api smoke:gemini:composite",
+		"media:smoke:video": "pnpm --filter @1dragon/api smoke:gemini:video",
+		"media:smoke:shortform": "bash tooling/gemini-shortform-test-flow.sh",
+		"media:review:gemini": "bash tooling/gemini-video-review-loop.sh",
+		"media:validate": "node tooling/validate-media.mjs",
+		"media:validate:latest": "node tooling/validate-media.mjs --latest",
+		"media:loop": "node tooling/media-feedback-loop.mjs",
+		"media:loop:latest": "node tooling/media-feedback-loop.mjs --iterations 3",
+		"media:research-loop": "pnpm --filter @1dragon/api loop:research"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

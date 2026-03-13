@@ -49,6 +49,7 @@ export type JobStatusEvent = {
 }
 
 export type JobDetailResponse = {
+	id: string
 	jobId: string
 	status: string
 	progress: number
@@ -299,6 +300,7 @@ export function toJobStatusResponse(
 ): JobDetailResponse {
 	const retryCount = row.retryCount ?? 0
 	return {
+		id: row.id,
 		jobId: row.id,
 		status: row.status,
 		progress: row.progress,

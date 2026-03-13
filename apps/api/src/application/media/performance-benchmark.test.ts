@@ -2,21 +2,49 @@ import { performance } from 'node:perf_hooks'
 import { PlanTier } from '@1dragon/shared'
 import { describe, expect, it } from 'vitest'
 import type {
+	BuildPromptInput,
 	ComposerPort,
 	I2VGenerateOutput,
 	PromptBuilderPort,
 	RemoveBgPort,
 } from '@/domain/media/ports.js'
+import type { PromptCompileShotMapping } from '@/domain/media'
 import { GenerateVideoUseCase } from './generate-video.usecase.js'
 import { QualityControlService } from './quality-control.js'
 
+function buildShotMappings(
+	input: Pick<BuildPromptInput, 'shotCards'>,
+): ReadonlyArray<PromptCompileShotMapping> {
+	return (
+		input.shotCards?.map((shotCard) => ({
+			shotCardId: shotCard.id,
+			phase: shotCard.phase,
+			sceneIntent: shotCard.sceneIntent,
+			proofTarget: shotCard.proofTarget,
+			payoff: shotCard.payoff,
+			providerSegments: {
+				runway: `${shotCard.sceneIntent} ${shotCard.proofTarget} ${shotCard.payoff}`,
+				hailuo: `${shotCard.sceneIntent} ${shotCard.proofTarget} ${shotCard.payoff}`,
+				geminiVeo: `${shotCard.sceneIntent} ${shotCard.proofTarget} ${shotCard.payoff}`,
+				minimax: `${shotCard.sceneIntent} ${shotCard.proofTarget} ${shotCard.payoff}`,
+			},
+		})) ?? []
+	)
+}
+
 class BenchmarkPromptBuilder implements PromptBuilderPort {
-	public async build() {
+	public async build(input: BuildPromptInput) {
+		const shotMappings = buildShotMappings(input)
 		return {
 			runway: 'runway prompt',
 			hailuo: 'hailuo prompt',
 			geminiVeo: 'gemini prompt',
 			minimax: 'minimax prompt',
+			debug: {
+				storySummary: input.selectedConcept?.hook ?? 'story-summary',
+				selectedConceptFamily: input.selectedConcept?.family ?? 'DETAIL_PROOF',
+				shotMappings,
+			},
 		}
 	}
 }

@@ -64,6 +64,7 @@ export class VideoJobRepositoryImpl implements VideoJobRepository {
 		const inserted = await db
 			.insert(videoJobs)
 			.values({
+				...(input.id ? { id: input.id } : {}),
 				userId: input.userId,
 				inputImageUrl: input.inputImageUrl,
 				productAnalysisId: input.productAnalysisId ?? null,

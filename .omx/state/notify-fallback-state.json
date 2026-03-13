@@ -1,9 +1,0 @@
-{
-  "pid": 75225,
-  "started_at": "2026-02-20T16:56:12.605Z",
-  "cwd": "/Users/chans/workspace/zodragon",
-  "notify_script": "/usr/local/lib/node_modules/oh-my-codex/scripts/notify-hook.js",
-  "poll_ms": 700,
-  "tracked_files": 1,
-  "seen_turns": 0
-}

@@ -103,6 +103,134 @@ npm run dev
 
 [http://localhost:3000](http://localhost:3000) 에서 확인하세요.
 
+## 테스트 이미지/영상 검증
+
+생성된 산출물은 `ffprobe` 기반 로컬 검증 스크립트로 빠르게 확인할 수 있습니다.
+
+```bash
+npm run media:validate -- \
+  --image artifacts/test-product-20260309-020243.png \
+  --video artifacts/test-video-20260309-020243.mp4 \
+  --out artifacts/test-media-validation.json
+```
+
+최신 테스트 산출물을 자동으로 고르려면 아래 스크립트를 사용합니다.
+
+```bash
+npm run media:validate:latest
+```
+
+## 직접 Gemini smoke 테스트
+
+첫 단계 검증은 전체 API/워커 런타임을 올리기 전에 Gemini provider 자체가 살아 있는지 확인하는 것입니다.
+모든 실행 결과는 `artifacts/live-media-smoke/` 아래에 저장됩니다.
+
+이미지 생성 smoke:
+
+```bash
+pnpm media:smoke:image -- \
+  --prompt "A premium ecommerce hero image of a plaid dress in a clean studio, photorealistic, soft lighting" \
+  --aspect-ratio 9:16
+```
+
+착장 composite smoke:
+
+```bash
+pnpm media:smoke:composite -- \
+  --image /absolute/path/to/product-image.png \
+  --persona-brief "A real adult woman wearing the exact garment in a premium boutique studio, full body, confident pose"
+```
+
+비디오 생성 smoke:
+
+```bash
+pnpm media:smoke:video -- \
+  --image /absolute/path/to/source-image.png \
+  --prompt "Create a short vertical ecommerce video from this source image. Preserve the product identity exactly." \
+  --aspect-ratio 9:16 \
+  --duration-seconds 8
+```
+
+필수 환경 변수:
+- `GEMINI_IMAGEN_API_KEY` 또는 `GEMINI_VEO_API_KEY` for image smoke
+- `GEMINI_API_KEY` 또는 `GEMINI_VEO_API_KEY` for composite smoke
+- `GEMINI_VEO_API_KEY` for video smoke
+
+이 smoke 경로는 provider 호출 자체를 검증합니다. 인증, DB, Redis, S3, worker orchestration까지 포함한 full-stack 성공을 의미하지는 않습니다.
+
+## Composite-first 숏폼 테스트 플로우
+
+패션 상품처럼 `product-only -> Veo`가 부자연스러운 경우에는 composite-first 플로우를 사용합니다.
+이 경로는 `상품 이미지 -> Gemini composite image -> Veo 8초 영상 -> Gemini ad review` 순서로 실행됩니다.
+
+```bash
+pnpm media:smoke:shortform -- \
+  --image /absolute/path/to/product-image.png \
+  --hook "첫 장면부터 시선 정지" \
+  --message "핏과 실루엣이 바로 보이는 원피스" \
+  --cta "지금 코디 확인" \
+  --cta-mode external-overlay
+```
+
+기본값:
+- 8초 Veo
+- wearer-first opening 요구
+- `cta-mode external-overlay`
+
+## Gemini 광고 리뷰 루프
+
+생성된 후보 영상을 기술 통과 여부가 아니라 광고 적합성 기준으로 점검하려면 Gemini 리뷰 루프를 사용합니다.
+이 루프는 source image, sampled frames, technical validation 결과를 함께 보고 `사람 등장`, `능동 시연`, `스토리`, `메시지`, `CTA`를 fail-closed 방식으로 평가합니다.
+
+```bash
+pnpm media:review:gemini -- \
+  --image /absolute/path/to/source-image.png \
+  --video-dir apps/api/scripts/output \
+  --iterations 3 \
+  --review-backend cli-then-api \
+  --hook "첫 장면부터 시선 정지" \
+  --message "핏과 실루엣이 바로 보이는 원피스" \
+  --cta "지금 코디 확인"
+```
+
+핵심 옵션:
+- `--review-backend api|cli|cli-then-api`
+- `--hook`, `--message`, `--cta`, `--audience`
+- `--cta-mode in-video|external-overlay`
+- `--allow-product-only-opening`
+- `--allow-no-human`, `--allow-passive-demo`, `--allow-no-story`, `--allow-no-message`, `--allow-no-cta`
+
+운영 권장:
+- 기본 게이트는 `api`를 사용합니다. 검증 중 같은 샘플에서 `cli` 평가는 더 흔들릴 수 있었습니다.
+- `cli` 또는 `cli-then-api`는 로컬 연구/탐색용 reviewer로 두고, 최종 pass/fail 판정은 API 결과를 우선합니다.
+- 패션 광고 테스트에서는 `product-only` 첫 프레임보다 `wearer-first composite`를 우선합니다.
+- CTA를 후처리 오버레이로 넣을 계획이면 `--cta-mode external-overlay`를 사용합니다.
+
+산출물:
+- `artifacts/gemini-review-loop/<run-id>/loop-summary.json`
+- `artifacts/gemini-review-loop/<run-id>/loop-summary.md`
+- iteration별 `technical-validation.json`, `gemini-review.json`, `iteration-summary.json`
+
+## 피드백 루프 (확장 + 학습 + 개선)
+
+테스트 영상을 여러 버전으로 자동 생성하고, 규격/의도/표시(변화량)를 함께 점수화해서
+가장 좋은 후보를 고릅니다. 결과는 `artifacts/feedback-loop/`에 누적 저장됩니다.
+
+```bash
+npm run media:loop -- \
+  --image artifacts/test-product-20260309-020243.png \
+  --iterations 3 \
+  --headline "1Dragon TEST AD" \
+  --intent "상품 핵심가치를 15초 안에 전달" \
+  --cta "지금 영상 만들기"
+```
+
+생성물:
+- `artifacts/feedback-loop/<run-id>/candidate-*.mp4`
+- `artifacts/feedback-loop/<run-id>/loop-summary.json`
+- `artifacts/feedback-loop/<run-id>/loop-summary.md`
+- `artifacts/feedback-loop/history.jsonl` (학습 히스토리)
+
 ## 📋 MVP 개발 로드맵
 
 ### Sprint 0: 기반 구축 (Week 1) ✅

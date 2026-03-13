@@ -234,6 +234,13 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
 					...state.persona,
 					compositeImageUrl: null,
 				},
+				preview: {
+					...state.preview,
+					remainingRegenerations: 5,
+					previousVideoUrl: null,
+					candidateVideoUrl: null,
+					candidatePlatform: null,
+				},
 			}
 
 		case 'SET_PRODUCT_NAME':
@@ -487,6 +494,10 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
 			}
 
 		case 'REGENERATE':
+			if (state.preview.remainingRegenerations <= 0) {
+				return state
+			}
+
 			return {
 				...state,
 				step: 'STYLE',
@@ -499,6 +510,10 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
 				preview: {
 					...state.preview,
 					variants: [],
+					remainingRegenerations: state.preview.remainingRegenerations - 1,
+					previousVideoUrl: null,
+					candidateVideoUrl: null,
+					candidatePlatform: null,
 				},
 			}
 

@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto'
-import { PlanTier, ProductCategory, type ProductCategory as ProductCategoryType } from '@1dragon/shared'
+import {
+	AgenticWorkflow,
+	PlanTier,
+	ProductCategory,
+	resolveAgenticExecutionPlan,
+	type AgenticExecutionPlan,
+	type ProductCategory as ProductCategoryType,
+} from '@1dragon/shared'
 import { Worker, type Job } from 'bullmq'
 import { eq } from 'drizzle-orm'
 import { NotificationEvent } from '@/domain/notification/entities.js'
@@ -70,6 +77,11 @@ const DEFAULT_COPY = {
 
 const PRODUCT_CATEGORY_SET = new Set<string>(Object.values(ProductCategory))
 const FOOTWEAR_KEYWORD_PATTERN = /(신발|운동화|스니커|구두|로퍼|샌들|shoe|shoes|sneaker|sneakers|boot|boots|heel|heels)/i
+const PROMPT_CHAIN_STAGES = ['입력 분석', '프롬프트 설계', '영상 생성', '품질 평가'] as const
+const PROMPT_CHAIN_DIRECTIVES = [
+	'Execute as a prompt chain: analyze product signals first, then design the scene prompt, then generate the final video.',
+	'Preserve product identity across every stage and reuse prior stage outputs consistently.',
+] as const
 
 function resolvePlanTier(input: { duration: number; planTier?: PlanTier }): PlanTier {
 	if (input.planTier === PlanTier.STARTER || input.planTier === PlanTier.FREE) {
@@ -89,6 +101,31 @@ function buildRetryCount(value: number | undefined): number {
 
 function canRetryByPolicy(retryCount: number): boolean {
 	return retryCount <= MAX_RETRY_COUNT
+}
+
+function appendUniqueValues(
+	base: ReadonlyArray<string>,
+	extras: ReadonlyArray<string>,
+): string[] {
+	const seen = new Set<string>()
+	const merged: string[] = []
+
+	for (const value of [...base, ...extras]) {
+		const normalized = value.trim()
+		if (normalized.length === 0) {
+			continue
+		}
+
+		const key = normalized.toLowerCase()
+		if (seen.has(key)) {
+			continue
+		}
+
+		seen.add(key)
+		merged.push(normalized)
+	}
+
+	return merged
 }
 
 function resolveDeadLetterReason(error: unknown): MediaGenerateDlqJobData['reason'] {
@@ -163,6 +200,19 @@ function buildPersonaTargetAudienceText(input: {
 		.map((value) => value.trim())
 		.filter(Boolean)
 		.join(' ')
+}
+
+function buildMissionPromptDirectives(mission: AgenticExecutionPlan['mission']): string[] {
+	return [
+		`Operating soul: ${mission.soul}`,
+		`Purpose: ${mission.purpose}`,
+		`Operating philosophy: ${mission.philosophy.join(' | ')}`,
+		...mission.goals.map(
+			(goal, index) =>
+				`Goal ${index + 1}: ${goal.name}. Outcome: ${goal.outcome} Success signal: ${goal.successSignal}`,
+		),
+		`Definition of done: ${mission.successCriteria.join(' | ')}`,
+	]
 }
 
 async function resolvePersonaPreset(input: {
@@ -295,6 +345,22 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 		duration: job.data.options.duration,
 		...(job.data.options.planTier !== undefined ? { planTier: job.data.options.planTier } : {}),
 	})
+	const agenticPlan =
+		job.data.agenticPlan ??
+		resolveAgenticExecutionPlan({
+			...(job.data.agenticMode ? { agenticMode: job.data.agenticMode } : {}),
+			...(job.data.productCategory ? { productCategory: job.data.productCategory } : {}),
+			...(job.data.keywords ? { keywords: job.data.keywords } : {}),
+			...(job.data.autoShortformWorkflow !== undefined
+				? { autoShortformWorkflow: job.data.autoShortformWorkflow }
+				: {}),
+			...(job.data.skipWearableComposite !== undefined
+				? { skipWearableComposite: job.data.skipWearableComposite }
+				: {}),
+			...(job.data.personaId ? { personaId: job.data.personaId } : {}),
+			...(job.data.creativeContext ? { creativeContext: job.data.creativeContext } : {}),
+			duration: job.data.options.duration,
+		})
 	const isFirstVideo = job.data.options.isFirstVideo === true
 	const productCategory = normalizeProductCategory(job.data.productCategory)
 	const baseMoods = job.data.moods ?? ['PROFESSIONAL']
@@ -302,24 +368,53 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 	const baseCopy = job.data.copy ?? DEFAULT_COPY
 	const creativeContext = normalizeCreativeContext(job.data.creativeContext)
 	const shortformWorkflow = applyShortformWorkflow({
-		enabled: job.data.autoShortformWorkflow !== false,
+		enabled: agenticPlan.features.shortformWorkflow,
 		productCategory,
 		moods: baseMoods,
 		keywords: baseKeywords,
 		copy: baseCopy,
 		...(creativeContext ? { context: creativeContext } : {}),
 	})
+	const missionDirectives = buildMissionPromptDirectives(agenticPlan.mission)
+	const promptDirectives = appendUniqueValues(
+		missionDirectives,
+		agenticPlan.workflow === AgenticWorkflow.PROMPT_CHAIN
+			? appendUniqueValues(shortformWorkflow.promptDirectives, PROMPT_CHAIN_DIRECTIVES)
+			: [...shortformWorkflow.promptDirectives],
+	)
+	const workflowStages =
+		agenticPlan.workflow === AgenticWorkflow.PROMPT_CHAIN
+			? appendUniqueValues(shortformWorkflow.workflowStages, PROMPT_CHAIN_STAGES)
+			: [...shortformWorkflow.workflowStages]
 	const moods = [...shortformWorkflow.moods]
 	const keywords = [...shortformWorkflow.keywords]
 	const copy = { ...shortformWorkflow.copy }
 
+	logger.info(
+		{
+			jobId,
+			userId,
+			agenticMode: agenticPlan.mode,
+			agenticWorkflow: agenticPlan.workflow,
+			agenticRouting: agenticPlan.routing,
+			agenticPurpose: agenticPlan.mission.purpose,
+			agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
+		},
+		'resolved agentic execution plan',
+	)
+
 	const currentStatus = existing.status as JobStatus
 	const currentRetryCount = buildRetryCount(existing.retryCount)
+	let lastKnownStatus = currentStatus
+	const persistedTransitionIds = new Set<string>()
 	let inputImageUrl = job.data.imageUrl
 	let modelCompositeApplied = false
 	let modelPersonaSelectionId: string | null = existing.modelPersonaSelectionId
 
-	if (shouldApplyWearableComposite({ category: productCategory, keywords })) {
+	if (
+		agenticPlan.features.wearableComposite &&
+		shouldApplyWearableComposite({ category: productCategory, keywords })
+	) {
 		try {
 			const presetRepository = new ModelPersonaPresetRepositoryImpl()
 			const selectionRepository = new ModelPersonaSelectionRepositoryImpl()
@@ -409,18 +504,67 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			moods,
 			keywords,
 			copy,
-			...(shortformWorkflow.enabled
+			...(job.data.recentConceptFamilies
+				? { recentConceptFamilies: job.data.recentConceptFamilies }
+				: {}),
+			...(job.data.requestedConceptFamily
+				? { requestedConceptFamily: job.data.requestedConceptFamily }
+				: {}),
+			...(promptDirectives.length > 0 || workflowStages.length > 0
 				? {
-					promptDirectives: shortformWorkflow.promptDirectives,
-					workflowStages: shortformWorkflow.workflowStages,
+					promptDirectives,
+					workflowStages,
 				}
 				: {}),
 			includeWatermark: planTier === PlanTier.FREE,
 			currentStatus,
 			currentRetryCount,
-		})
+			onTransition: async (transition) => {
+				lastKnownStatus = transition.newStatus
+				if (transition.newStatus === 'SUCCEEDED' || transition.newStatus === 'DEGRADED_FAILED') {
+					return
+				}
 
+				await persistJobTransition(repository, {
+					jobId,
+					userId,
+					previousStatus: transition.previousStatus,
+					newStatus: transition.newStatus,
+					retryCount: currentRetryCount,
+					metadata: {
+						...transition.metadata,
+						stage: 'generate-worker',
+						agenticMode: agenticPlan.mode,
+						agenticWorkflow: agenticPlan.workflow,
+						agenticRouting: agenticPlan.routing,
+						agenticReasoning: agenticPlan.reasoning,
+						agenticSteps: agenticPlan.steps,
+						agenticSoul: agenticPlan.mission.soul,
+						agenticPurpose: agenticPlan.mission.purpose,
+						agenticPhilosophy: agenticPlan.mission.philosophy,
+						agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
+						agenticSuccessCriteria: agenticPlan.mission.successCriteria,
+						modelCompositeApplied,
+						shortformWorkflowApplied: shortformWorkflow.enabled,
+						...(workflowStages.length > 0
+							? {
+								shortformWorkflowStages: workflowStages,
+								trendSnapshotDate: shortformWorkflow.trendSnapshotDate,
+							}
+							: {}),
+						...(modelPersonaSelectionId ? { modelPersonaSelectionId } : {}),
+					},
+					errorMessage: null,
+				})
+				persistedTransitionIds.add(transition.id)
+			},
+		})
 		for (const transition of generated.events) {
+			if (persistedTransitionIds.has(transition.id)) {
+				continue
+			}
+
+			lastKnownStatus = transition.newStatus
 			await persistJobTransition(repository, {
 				jobId,
 				userId,
@@ -430,11 +574,21 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 				metadata: {
 					...transition.metadata,
 					stage: 'generate-worker',
+					agenticMode: agenticPlan.mode,
+					agenticWorkflow: agenticPlan.workflow,
+					agenticRouting: agenticPlan.routing,
+					agenticReasoning: agenticPlan.reasoning,
+					agenticSteps: agenticPlan.steps,
+					agenticSoul: agenticPlan.mission.soul,
+					agenticPurpose: agenticPlan.mission.purpose,
+					agenticPhilosophy: agenticPlan.mission.philosophy,
+					agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
+					agenticSuccessCriteria: agenticPlan.mission.successCriteria,
 					modelCompositeApplied,
 					shortformWorkflowApplied: shortformWorkflow.enabled,
-					...(shortformWorkflow.enabled
+					...(workflowStages.length > 0
 						? {
-							shortformWorkflowStages: shortformWorkflow.workflowStages,
+							shortformWorkflowStages: workflowStages,
 							trendSnapshotDate: shortformWorkflow.trendSnapshotDate,
 						}
 						: {}),
@@ -465,7 +619,10 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 				status: generated.status,
 				retryCount: generated.job.retryCount,
 				progress: normalizeProgress(generated.status),
-				completedAt: generated.status === 'SUCCEEDED' ? new Date() : null,
+				completedAt:
+					generated.status === 'SUCCEEDED' || generated.status === 'DEGRADED_FAILED'
+						? new Date()
+						: null,
 				updatedAt: new Date(),
 				...(modelPersonaSelectionId ? { modelPersonaSelectionId } : {}),
 				errorMessage:
@@ -479,6 +636,7 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			qualityScore: generated.qualityScore,
 			shouldRetry: generated.shouldRetry,
 			eventCount: generated.events.length,
+			agenticWorkflow: agenticPlan.workflow,
 		}
 	} catch (error) {
 		const nextRetryCount = buildRetryCount(currentRetryCount + 1)
@@ -496,13 +654,17 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 		await persistJobTransition(repository, {
 			jobId,
 			userId,
-			previousStatus: existing.status,
+			previousStatus: lastKnownStatus,
 			newStatus: finalStatus,
 			retryCount: nextRetryCount,
 			errorMessage,
 			metadata: {
 				reason: 'worker_exception',
 				canRetry: shouldRetry,
+				agenticMode: agenticPlan.mode,
+				agenticWorkflow: agenticPlan.workflow,
+				agenticPurpose: agenticPlan.mission.purpose,
+				agenticGoals: agenticPlan.mission.goals.map((goal) => goal.name),
 			},
 		})
 
@@ -526,7 +688,7 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 						sourceQueue: QueueName.MEDIA_GENERATE,
 						failedAt: new Date().toISOString(),
 						metadata: {
-							previousStatus: existing.status,
+							previousStatus: lastKnownStatus,
 							finalStatus,
 							retryCount: nextRetryCount,
 							queueAttemptsConfigured: job.opts.attempts ?? mediaGenerateRetryPolicy.maxAttempts,
@@ -562,6 +724,7 @@ export async function processMediaGenerateJob(job: Job<MediaGenerateJobData>): P
 			qualityScore: 0,
 			shouldRetry: false,
 			eventCount: 0,
+			agenticWorkflow: agenticPlan.workflow,
 		}
 	}
 }

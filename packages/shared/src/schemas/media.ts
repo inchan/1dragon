@@ -7,9 +7,11 @@ import { z } from 'zod'
 import {
 	jobStatusSchema,
 	platformSchema,
+	storyConceptFamilySchema,
 	stylePresetSchema,
 	subtitleStyleSchema,
 } from '../enums'
+import { agenticExecutionPlanSchema, agenticModeSchema } from '../agentic'
 
 // ── Request Schemas ──────────────────────────────────────────────────────────
 
@@ -27,7 +29,9 @@ export const createVideoJobRequestSchema = z.object({
 	productCategory: z.string().optional(),
 	moods: z.array(z.string()).optional(),
 	keywords: z.array(z.string()).optional(),
+	agenticMode: agenticModeSchema.optional(),
 	autoShortformWorkflow: z.boolean().optional(),
+	skipWearableComposite: z.boolean().optional(),
 	creativeContext: z
 		.object({
 			location: z.string().trim().min(1).max(120).optional(),
@@ -44,6 +48,8 @@ export const createVideoJobRequestSchema = z.object({
 			cta: z.string(),
 		})
 		.optional(),
+	recentConceptFamilies: z.array(storyConceptFamilySchema).max(5).optional(),
+	requestedConceptFamily: storyConceptFamilySchema.optional(),
 })
 
 export const retryVideoJobRequestSchema = z.object({
@@ -76,6 +82,7 @@ export const createVideoJobResponseSchema = z.object({
 	retryCount: z.number().int().min(0),
 	canRetry: z.boolean(),
 	createdAt: z.string().datetime(),
+	agenticPlan: agenticExecutionPlanSchema.optional(),
 })
 
 export const videoVariantResponseSchema = z.object({
@@ -117,6 +124,7 @@ export const mediaJobStatusResponseSchema = z.object({
 export type CreateVideoJobRequest = z.infer<typeof createVideoJobRequestSchema>
 export type CreateVideoJobResponse = z.infer<typeof createVideoJobResponseSchema>
 export type RetryVideoJobRequest = z.infer<typeof retryVideoJobRequestSchema>
+export type StoryConceptFamily = z.infer<typeof storyConceptFamilySchema>
 export type VideoJobResponse = z.infer<typeof videoJobResponseSchema>
 export type VideoVariantResponse = z.infer<typeof videoVariantResponseSchema>
 export type VideoJobDetailResponse = z.infer<typeof videoJobDetailResponseSchema>

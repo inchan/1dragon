@@ -28,6 +28,8 @@ describe('applyShortformWorkflow', () => {
 		expect(output.copy.cta).toContain('댓글')
 		expect(output.promptDirectives.join(' ')).toContain('성수동')
 		expect(output.promptDirectives.join(' ')).toContain('하이패션 모델')
+		expect(output.promptDirectives.join(' ')).toContain('critical reviewer')
+		expect(output.trendSnapshotDate).toBe('2026-03-10')
 	})
 
 	it('비활성화 또는 비대상 카테고리면 입력을 그대로 유지한다', () => {

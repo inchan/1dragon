@@ -32,6 +32,8 @@ export {
 	contentFormatSchema,
 	HookPattern,
 	hookPatternSchema,
+	StoryConceptFamily,
+	storyConceptFamilySchema,
 	SlideRole,
 	slideRoleSchema,
 } from './enums'
@@ -44,6 +46,29 @@ export {
 	formatPrice,
 	formatFileSize,
 } from './utils'
+
+// ── Agentic ───────────────────────────────────
+export {
+	AgenticMode,
+	agenticModeSchema,
+	AgenticWorkflow,
+	agenticWorkflowSchema,
+	AgenticRouting,
+	agenticRoutingSchema,
+	agenticGoalSchema,
+	agenticMissionSchema,
+	agenticExecutionPlanSchema,
+	resolveAgenticExecutionPlan,
+} from './agentic'
+export type {
+	AgenticGoal,
+	AgenticMission,
+	AgenticMode as AgenticModeType,
+	AgenticWorkflow as AgenticWorkflowType,
+	AgenticRouting as AgenticRoutingType,
+	AgenticExecutionPlan,
+	ResolveAgenticExecutionPlanInput,
+} from './agentic'
 
 // ── Schemas (re-exported after 2.4 is complete) ──
 export * from './schemas'

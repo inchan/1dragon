@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { and, count, desc, eq, gte } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { ErrorCode, PlanTier } from '@1dragon/shared'
+import { ErrorCode, PlanTier, resolveAgenticExecutionPlan } from '@1dragon/shared'
 import { DailyPublishHealthService, MediaReliabilityPolicyService } from '@/domain/media/services.js'
 import { db } from '@/infrastructure/persistence/db.js'
-import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
 import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
+import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
 import {
 	QueueName,
 	addJob,
@@ -64,6 +64,21 @@ export function createJobSubRouter(deps: {
 		const idempotencyKey =
 			c.req.header('Idempotency-Key')?.trim() ??
 			(parsed.data.idempotencyKey?.trim() ? parsed.data.idempotencyKey : undefined)
+		const agenticPlan = resolveAgenticExecutionPlan({
+			...(parsed.data.agenticMode ? { agenticMode: parsed.data.agenticMode } : {}),
+			...(parsed.data.productCategory ? { productCategory: parsed.data.productCategory } : {}),
+			...(parsed.data.keywords ? { keywords: parsed.data.keywords } : {}),
+			...(parsed.data.platforms ? { platforms: parsed.data.platforms } : {}),
+			...(parsed.data.duration ? { duration: parsed.data.duration } : {}),
+			...(parsed.data.personaId ? { personaId: parsed.data.personaId } : {}),
+			...(parsed.data.creativeContext ? { creativeContext: parsed.data.creativeContext } : {}),
+			...(parsed.data.autoShortformWorkflow !== undefined
+				? { autoShortformWorkflow: parsed.data.autoShortformWorkflow }
+				: {}),
+			...(parsed.data.skipWearableComposite !== undefined
+				? { skipWearableComposite: parsed.data.skipWearableComposite }
+				: {}),
+		})
 
 		const jobId = idempotencyKey
 			? buildDeterministicJobId(user.id, idempotencyKey, parsed.data.imageUrl)
@@ -76,6 +91,7 @@ export function createJobSubRouter(deps: {
 					success: true,
 					data: {
 						...toJobStatusResponse(existing),
+						agenticPlan,
 						isDuplicate: true,
 					},
 				},
@@ -124,6 +140,7 @@ export function createJobSubRouter(deps: {
 						success: true,
 						data: {
 							...toJobStatusResponse(existing),
+							agenticPlan,
 							isDuplicate: true,
 						},
 					},
@@ -164,10 +181,21 @@ export function createJobSubRouter(deps: {
 			...(parsed.data.productCategory != null ? { productCategory: parsed.data.productCategory } : {}),
 			...(parsed.data.moods != null ? { moods: parsed.data.moods } : {}),
 			...(parsed.data.keywords != null ? { keywords: parsed.data.keywords } : {}),
+			...(parsed.data.agenticMode != null ? { agenticMode: parsed.data.agenticMode } : {}),
+			agenticPlan,
 			...(parsed.data.autoShortformWorkflow != null
 				? { autoShortformWorkflow: parsed.data.autoShortformWorkflow }
 				: {}),
+			...(parsed.data.skipWearableComposite != null
+				? { skipWearableComposite: parsed.data.skipWearableComposite }
+				: {}),
 			...(parsed.data.copy != null ? { copy: parsed.data.copy } : {}),
+			...(parsed.data.recentConceptFamilies != null
+				? { recentConceptFamilies: parsed.data.recentConceptFamilies }
+				: {}),
+			...(parsed.data.requestedConceptFamily != null
+				? { requestedConceptFamily: parsed.data.requestedConceptFamily }
+				: {}),
 			options: {
 				duration: parsed.data.duration ?? CREATE_JOB_DEFAULT_DURATION,
 				stylePreset: parsed.data.stylePreset,
@@ -179,18 +207,6 @@ export function createJobSubRouter(deps: {
 		try {
 			await addJob(QueueName.MEDIA_GENERATE, queuePayload, { jobId: created.id })
 			await jobRepository.updateStatus({ jobId: created.id, status: 'QUEUED', progress: 0 })
-			await appendJobStatusEvent({
-				jobId: created.id,
-				userId: user.id,
-				previousStatus: created.status,
-				newStatus: 'QUEUED',
-				metadata: {
-					source: 'queue',
-					idempotencyKey,
-					retryAttempt: 0,
-				},
-				retryCount: created.retryCount ?? 0,
-			})
 		} catch (error) {
 			logger.error(
 				{ error: error instanceof Error ? error.message : String(error), jobId: created.id },
@@ -230,7 +246,10 @@ export function createJobSubRouter(deps: {
 		return c.json(
 			{
 				success: true,
-				data: toJobStatusResponse(created),
+				data: {
+					...toJobStatusResponse(created),
+					agenticPlan,
+				},
 			},
 			201,
 		)
@@ -307,8 +326,12 @@ export function createJobSubRouter(deps: {
 			.where(and(eq(jobEvents.jobId, job.id), eq(jobEvents.eventType, 'JOB_STATUS_CHANGED')))
 			.orderBy(desc(jobEvents.createdAt))
 			.limit(20)
+		const orderedRows = [...rows].sort(
+			(left, right) =>
+				new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+		)
 
-		const events = rows.map<JobStatusEvent>((row) => {
+		const events = orderedRows.map<JobStatusEvent>((row) => {
 			const payload = toRecord(row.payload)
 			const event = toJobStatusEventFromDbPayload(payload, {
 				id: job.id,

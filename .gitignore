@@ -33,3 +33,6 @@ pnpm-debug.log*
 
 # Sentry
 .sentryclirc
+
+# Local/generated artifacts
+artifacts/

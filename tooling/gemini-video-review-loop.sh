@@ -12,8 +12,13 @@ VIDEOS_ARG=""
 OUT_DIR=""
 AD_HOOK=""
 AD_MESSAGE=""
+MESSAGE_SPINE_ID=""
+PROOF_DETAIL=""
+VIEWER_TAKEAWAY=""
 AD_CTA=""
 AD_AUDIENCE=""
+EDITORIAL_THESIS=""
+TALENT_BRIEF=""
 CTA_MODE="in-video"
 REQUIRE_HUMAN="true"
 REQUIRE_OPENING_WEARER="true"
@@ -37,10 +42,15 @@ Options:
   --model <name>                 Gemini reviewer model. Default: gemini-2.5-flash
   --review-backend <mode>        api | cli | cli-then-api. Default: api
   --out-dir <dir>                Output directory
+  --message-spine <id>          QUESTION_PROOF_CHOICE | DETAIL_SILHOUETTE_DECISION
   --hook <text>                  Expected hook for the ad brief
   --message <text>               Expected message / benefit for the ad brief
+  --proof-detail <text>          Expected single proof beat
+  --viewer-takeaway <text>       Expected viewer takeaway
   --cta <text>                   Expected CTA for the ad brief
   --audience <text>              Expected audience for the ad brief
+  --editorial-thesis <text>      Editorial thesis for the run
+  --talent-brief <text>          Talent direction brief for the run
   --cta-mode <mode>              in-video | external-overlay. Default: in-video
   --allow-no-human               Do not require visible person / wearer
   --allow-product-only-opening   Do not require a visible wearer in the opening frame
@@ -52,7 +62,7 @@ Options:
 Examples:
   tooling/gemini-video-review-loop.sh --image /tmp/fashion-001.png
   tooling/gemini-video-review-loop.sh --image /tmp/fashion-001.png --videos a.mp4,b.mp4,c.mp4
-  tooling/gemini-video-review-loop.sh --image /tmp/fashion-001.png --review-backend cli-then-api --hook "첫 장면부터 시선 정지" --message "체형 보정 핏" --cta "지금 코디 확인"
+  tooling/gemini-video-review-loop.sh --image /tmp/fashion-001.png --review-backend cli-then-api --message-spine QUESTION_PROOF_CHOICE --hook "첫 장면부터 시선 정지" --message "체형 보정 핏" --proof-detail "한 번의 움직임으로 핏을 증명" --viewer-takeaway "핏이 또렷한 원피스" --cta "지금 코디 확인"
 EOF
 }
 
@@ -169,6 +179,10 @@ while [[ $# -gt 0 ]]; do
 			OUT_DIR="$2"
 			shift 2
 			;;
+		--message-spine)
+			MESSAGE_SPINE_ID="$2"
+			shift 2
+			;;
 		--hook)
 			AD_HOOK="$2"
 			shift 2
@@ -177,12 +191,28 @@ while [[ $# -gt 0 ]]; do
 			AD_MESSAGE="$2"
 			shift 2
 			;;
+		--proof-detail)
+			PROOF_DETAIL="$2"
+			shift 2
+			;;
+		--viewer-takeaway)
+			VIEWER_TAKEAWAY="$2"
+			shift 2
+			;;
 		--cta)
 			AD_CTA="$2"
 			shift 2
 			;;
 		--audience)
 			AD_AUDIENCE="$2"
+			shift 2
+			;;
+		--editorial-thesis)
+			EDITORIAL_THESIS="$2"
+			shift 2
+			;;
+		--talent-brief)
+			TALENT_BRIEF="$2"
 			shift 2
 			;;
 		--cta-mode)
@@ -275,6 +305,17 @@ elif [[ "$CTA_MODE" != "in-video" ]]; then
 	exit 1
 fi
 
+if [[ -n "$MESSAGE_SPINE_ID" ]]; then
+	case "$MESSAGE_SPINE_ID" in
+		QUESTION_PROOF_CHOICE|DETAIL_SILHOUETTE_DECISION)
+			;;
+		*)
+			echo "Unsupported message spine: $MESSAGE_SPINE_ID" >&2
+			exit 1
+			;;
+	esac
+fi
+
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 if [[ -z "$OUT_DIR" ]]; then
 	OUT_DIR="$ROOT_DIR/artifacts/gemini-review-loop/$RUN_ID"
@@ -315,7 +356,7 @@ fi
 VIDEOS=("${VIDEOS[@]:0:$ITERATIONS}")
 
 RUN_MANIFEST_JSON="$OUT_DIR/run-manifest.json"
-python3 - "$RUN_MANIFEST_JSON" "$IMAGE_PATH" "$SOURCE_IMAGE_COPY" "$MODEL" "$ITERATIONS" "$REVIEW_BACKEND" "$AD_HOOK" "$AD_MESSAGE" "$AD_CTA" "$AD_AUDIENCE" "$CTA_MODE" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" "${VIDEOS[@]}" <<'PY_MANIFEST'
+python3 - "$RUN_MANIFEST_JSON" "$IMAGE_PATH" "$SOURCE_IMAGE_COPY" "$MODEL" "$ITERATIONS" "$REVIEW_BACKEND" "$MESSAGE_SPINE_ID" "$AD_HOOK" "$AD_MESSAGE" "$PROOF_DETAIL" "$VIEWER_TAKEAWAY" "$AD_CTA" "$AD_AUDIENCE" "$EDITORIAL_THESIS" "$TALENT_BRIEF" "$CTA_MODE" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" "${VIDEOS[@]}" <<'PY_MANIFEST'
 from pathlib import Path
 import json
 import sys
@@ -326,18 +367,23 @@ source_image_copy = sys.argv[3]
 model = sys.argv[4]
 iterations = int(sys.argv[5])
 review_backend = sys.argv[6]
-hook = sys.argv[7]
-message = sys.argv[8]
-cta = sys.argv[9]
-audience = sys.argv[10]
-cta_mode = sys.argv[11]
-require_human = sys.argv[12] == "true"
-require_opening_wearer = sys.argv[13] == "true"
-require_active_demo = sys.argv[14] == "true"
-require_story = sys.argv[15] == "true"
-require_message = sys.argv[16] == "true"
-require_cta = sys.argv[17] == "true"
-videos = sys.argv[18:]
+message_spine_id = sys.argv[7]
+hook = sys.argv[8]
+message = sys.argv[9]
+proof_detail = sys.argv[10]
+viewer_takeaway = sys.argv[11]
+cta = sys.argv[12]
+audience = sys.argv[13]
+editorial_thesis = sys.argv[14]
+talent_brief = sys.argv[15]
+cta_mode = sys.argv[16]
+require_human = sys.argv[17] == "true"
+require_opening_wearer = sys.argv[18] == "true"
+require_active_demo = sys.argv[19] == "true"
+require_story = sys.argv[20] == "true"
+require_message = sys.argv[21] == "true"
+require_cta = sys.argv[22] == "true"
+videos = sys.argv[23:]
 
 manifest = {
     "sourceImagePath": source_image,
@@ -346,18 +392,26 @@ manifest = {
     "reviewBackend": review_backend,
     "iterationTarget": iterations,
     "adBrief": {
+        "messageSpineId": message_spine_id,
         "hook": hook,
         "message": message,
+        "proofDetail": proof_detail,
+        "viewerTakeaway": viewer_takeaway,
         "cta": cta,
         "audience": audience,
+        "editorialThesis": editorial_thesis,
+        "talentBrief": talent_brief,
         "ctaMode": cta_mode,
     },
     "requiredChecks": {
         "human_present": require_human,
         "opening_has_wearer": require_opening_wearer,
+        "opening_continuity": True,
         "active_demonstration": require_active_demo,
         "story_present": require_story,
         "message_present": require_message,
+        "message_legibility": require_message,
+        "silhouette_readability": True,
         "cta_present": require_cta,
         "product_truth_pass": True,
     },
@@ -365,6 +419,50 @@ manifest = {
 }
 manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY_MANIFEST
+
+REVIEW_BRIEF_JSON="$OUT_DIR/review-brief.json"
+REVIEW_BRIEF_MD="$OUT_DIR/review-brief.md"
+python3 - "$RUN_MANIFEST_JSON" "$REVIEW_BRIEF_JSON" "$REVIEW_BRIEF_MD" <<'PY_REVIEW_BRIEF'
+from pathlib import Path
+import json
+import sys
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+review_brief = {
+    "adBrief": manifest.get("adBrief", {}),
+    "requiredChecks": manifest.get("requiredChecks", {}),
+    "sourceImagePath": manifest.get("sourceImagePath"),
+    "reviewBackend": manifest.get("reviewBackend"),
+    "iterationTarget": manifest.get("iterationTarget"),
+    "videos": manifest.get("videos", []),
+}
+
+Path(sys.argv[2]).write_text(
+    json.dumps(review_brief, indent=2, ensure_ascii=False) + "\n",
+    encoding="utf-8",
+)
+
+lines = [
+    "# Review Brief",
+    "",
+    "## Ad Brief",
+]
+for key, value in review_brief["adBrief"].items():
+    lines.append(f"- {key}: {value or 'unspecified'}")
+
+lines.extend(["", "## Required Checks"])
+for key, value in review_brief["requiredChecks"].items():
+    lines.append(f"- {key}: {value}")
+
+lines.extend(["", "## Inputs"])
+lines.append(f"- sourceImagePath: {review_brief['sourceImagePath']}")
+lines.append(f"- reviewBackend: {review_brief['reviewBackend']}")
+lines.append(f"- iterationTarget: {review_brief['iterationTarget']}")
+for video in review_brief["videos"]:
+    lines.append(f"- video: {video}")
+
+Path(sys.argv[3]).write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY_REVIEW_BRIEF
 
 python3 - "$STAGE_CLASSIFICATION_JSON" "$STAGE_CLASSIFICATION_MD" "$REVIEW_BACKEND" "$CLI_AVAILABLE" <<'PY_CLASSIFICATION'
 from pathlib import Path
@@ -605,7 +703,7 @@ PY_FRAME_TIMES
 
 	PAYLOAD_JSON="$TMP_DIR/payload-${ITERATION}.json"
 	CLI_PROMPT_TXT="$TMP_DIR/prompt-${ITERATION}.txt"
-	python3 - "$IMAGE_PATH" "$FRAME_OPEN" "$FRAME_A" "$FRAME_B" "$FRAME_C" "$TECH_JSON" "$PAYLOAD_JSON" "$CLI_PROMPT_TXT" "$(basename "$VIDEO_PATH")" "$AD_HOOK" "$AD_MESSAGE" "$AD_CTA" "$AD_AUDIENCE" "$CTA_MODE" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_PROMPT'
+	python3 - "$IMAGE_PATH" "$FRAME_OPEN" "$FRAME_A" "$FRAME_B" "$FRAME_C" "$TECH_JSON" "$PAYLOAD_JSON" "$CLI_PROMPT_TXT" "$(basename "$VIDEO_PATH")" "$MESSAGE_SPINE_ID" "$AD_HOOK" "$AD_MESSAGE" "$PROOF_DETAIL" "$VIEWER_TAKEAWAY" "$AD_CTA" "$AD_AUDIENCE" "$EDITORIAL_THESIS" "$TALENT_BRIEF" "$CTA_MODE" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_PROMPT'
 from pathlib import Path
 import base64
 import json
@@ -621,17 +719,22 @@ technical_json = Path(sys.argv[6])
 payload_json = Path(sys.argv[7])
 cli_prompt_txt = Path(sys.argv[8])
 video_name = sys.argv[9]
-hook = sys.argv[10]
-message = sys.argv[11]
-cta = sys.argv[12]
-audience = sys.argv[13]
-cta_mode = sys.argv[14]
-require_human = sys.argv[15] == "true"
-require_opening_wearer = sys.argv[16] == "true"
-require_active_demo = sys.argv[17] == "true"
-require_story = sys.argv[18] == "true"
-require_message = sys.argv[19] == "true"
-require_cta = sys.argv[20] == "true"
+message_spine_id = sys.argv[10]
+hook = sys.argv[11]
+message = sys.argv[12]
+proof_detail = sys.argv[13]
+viewer_takeaway = sys.argv[14]
+cta = sys.argv[15]
+audience = sys.argv[16]
+editorial_thesis = sys.argv[17]
+talent_brief = sys.argv[18]
+cta_mode = sys.argv[19]
+require_human = sys.argv[20] == "true"
+require_opening_wearer = sys.argv[21] == "true"
+require_active_demo = sys.argv[22] == "true"
+require_story = sys.argv[23] == "true"
+require_message = sys.argv[24] == "true"
+require_cta = sys.argv[25] == "true"
 
 with technical_json.open() as fh:
     technical = json.load(fh)
@@ -648,18 +751,26 @@ def inline_part(path: Path):
 
 
 brief = {
+    "message_spine_id": message_spine_id or "unspecified",
     "hook": hook or "unspecified",
     "message": message or "unspecified",
+    "proof_detail": proof_detail or "unspecified",
+    "viewer_takeaway": viewer_takeaway or "unspecified",
     "cta": cta or "unspecified",
     "audience": audience or "unspecified",
+    "editorial_thesis": editorial_thesis or "unspecified",
+    "talent_brief": talent_brief or "unspecified",
     "cta_mode": cta_mode,
 }
 required_checks = {
     "human_present": require_human,
     "opening_has_wearer": require_opening_wearer,
+    "opening_continuity": True,
     "active_demonstration": require_active_demo,
     "story_present": require_story,
     "message_present": require_message,
+    "message_legibility": require_message,
+    "silhouette_readability": True,
     "cta_present": require_cta,
     "product_truth_pass": True,
 }
@@ -690,21 +801,41 @@ Return strict JSON with this exact shape:
   "checks": {{
     "human_present": true,
     "opening_has_wearer": true,
+    "opening_continuity": true,
     "active_demonstration": true,
     "story_present": true,
     "message_present": true,
+    "message_legibility": true,
+    "silhouette_readability": true,
+    "talent_direction_pass": true,
     "cta_present": true,
     "product_truth_pass": true
   }},
+  "message_spine": {{
+    "id": "string",
+    "aligned": true,
+    "note": "string"
+  }},
+  "editorial_rubric": {{
+    "color_palette_control": {{"score": 1-5, "note": "string"}},
+    "composition": {{"score": 1-5, "note": "string"}},
+    "alignment_blocking": {{"score": 1-5, "note": "string"}},
+    "gaze_direction": {{"score": 1-5, "note": "string"}},
+    "silhouette_readability": {{"score": 1-5, "note": "string"}},
+    "framing": {{"score": 1-5, "note": "string"}},
+    "visual_hierarchy": {{"score": 1-5, "note": "string"}}
+  }},
+  "talent_direction": {{
+    "score": 1-5,
+    "pass": true,
+    "note": "string",
+    "failure_reasons": ["string"]
+  }},
   "scores": {{
-    "human_presence": 0-10,
-    "active_demonstration": 0-10,
-    "message_clarity": 0-10,
-    "story_structure": 0-10,
-    "cta_clarity": 0-10,
-    "product_truth": 0-10,
-    "hook_strength": 0-10,
-    "visual_quality": 0-10
+    "message_legibility": 0-30,
+    "editorial_visual_execution": 0-35,
+    "talent_direction": 0-20,
+    "product_truth_and_motion_discipline": 0-15
   }},
   "blocking_failures": ["string"],
   "one_sentence_summary": "string",
@@ -716,12 +847,23 @@ Return strict JSON with this exact shape:
 Evaluation rules:
 - human_present: true only if a visible person or believable wearer/user appears in a meaningful way.
 - opening_has_wearer: true only if the opening frame already contains a visible wearer. A product-only or mannequin-only opening means false.
+- opening_continuity: true only if the opening frame and the early frame clearly read as the same wearer, same garment, same styling, and same scene continuing through time. Any abrupt identity drift, garment reinterpretation, or background reset means false.
 - active_demonstration: true only if the product is demonstrated through action, use, styling, or clear motion beyond passive pan/zoom over a static subject.
 - story_present: true only if the sequence implies hook -> proof -> payoff or another clear advertising progression.
 - message_present: true only if the viewer can infer the intended selling angle or benefit.
+- message_legibility: true only if the one selling angle is specific enough to be stated back in one sentence.
+- silhouette_readability: true only if the garment outline or proof zone stays readable at a glance.
+- talent_direction_pass: true only if the talent reads as a restrained editorial fashion choice rather than a generic stock model.
 - cta_present: true only if the ending lands with a clear action or conversion prompt.
 - product_truth_pass: true only if the product remains faithful to the source image.
+- message_spine.aligned: true only if the clip clearly follows the requested message spine.
+- editorial_rubric scores: use 1 for uncontrolled, 3 for usable, 5 for clearly editorial.
+- talent_direction.failure_reasons: list stock-model cues, styling drift, or other explicit talent problems.
+- Weighted scores must respect the requested 30/35/20/15 split across message legibility, editorial execution, talent direction, and product-truth/motion discipline.
 - If CTA mode is external-overlay, a missing visible in-video CTA can be noted as a weakness but should not block an otherwise good candidate.
+- If CTA mode is external-overlay, any visible burned-in text, subtitles, captions, CTA button, lower-third, black text bar, product label, random letters, or other rendered copy anywhere in the sampled frames must be treated as blocking failure "external_overlay_text_contamination".
+- If CTA mode is external-overlay, do not return pass when visible in-video CTA or rendered text contamination is present.
+- If opening_has_wearer, opening_continuity, message_legibility, silhouette_readability, or product_truth_pass is false, include a concrete hard-fail statement in blocking_failures.
 - If any required check is missing, include a concrete statement in blocking_failures.
 - If you are uncertain about a required check, set it to false.
 - Do not use markdown fences. Output JSON only.
@@ -795,7 +937,7 @@ PY_PROMPT
 			fi
 		fi
 
-		if python3 - "$RAW_RESPONSE" "$REVIEW_JSON" "$NORMALIZED_JSON" "$TECH_JSON" "$VIDEO_PATH" "$TECH_EXIT" "$BACKEND" "$REVIEW_STDERR" "$ATTEMPTED_CSV" "$ERRORS_JOINED" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_REVIEW'
+		if python3 - "$RAW_RESPONSE" "$REVIEW_JSON" "$NORMALIZED_JSON" "$TECH_JSON" "$VIDEO_PATH" "$TECH_EXIT" "$BACKEND" "$REVIEW_STDERR" "$ATTEMPTED_CSV" "$ERRORS_JOINED" "$CTA_MODE" "$REQUIRE_HUMAN" "$REQUIRE_OPENING_WEARER" "$REQUIRE_ACTIVE_DEMO" "$REQUIRE_STORY" "$REQUIRE_MESSAGE" "$REQUIRE_CTA" <<'PY_REVIEW'
 from pathlib import Path
 import json
 import re
@@ -811,12 +953,13 @@ backend = sys.argv[7]
 stderr_path = sys.argv[8]
 attempted_csv = sys.argv[9]
 errors_joined = sys.argv[10]
-require_human = sys.argv[11] == "true"
-require_opening_wearer = sys.argv[12] == "true"
-require_active_demo = sys.argv[13] == "true"
-require_story = sys.argv[14] == "true"
-require_message = sys.argv[15] == "true"
-require_cta = sys.argv[16] == "true"
+cta_mode = sys.argv[11]
+require_human = sys.argv[12] == "true"
+require_opening_wearer = sys.argv[13] == "true"
+require_active_demo = sys.argv[14] == "true"
+require_story = sys.argv[15] == "true"
+require_message = sys.argv[16] == "true"
+require_cta = sys.argv[17] == "true"
 
 
 def strip_ansi(text: str) -> str:
@@ -887,9 +1030,13 @@ scores = review.get("scores", {}) if isinstance(review.get("scores"), dict) else
 normalized_checks = {
     "human_present": bool(checks.get("human_present", False)),
     "opening_has_wearer": bool(checks.get("opening_has_wearer", False)),
+    "opening_continuity": bool(checks.get("opening_continuity", False)),
     "active_demonstration": bool(checks.get("active_demonstration", False)),
     "story_present": bool(checks.get("story_present", False)),
     "message_present": bool(checks.get("message_present", False)),
+    "message_legibility": bool(checks.get("message_legibility", False)),
+    "silhouette_readability": bool(checks.get("silhouette_readability", False)),
+    "talent_direction_pass": bool(checks.get("talent_direction_pass", False)),
     "cta_present": bool(checks.get("cta_present", False)),
     "product_truth_pass": bool(checks.get("product_truth_pass", False)),
 }
@@ -897,12 +1044,23 @@ normalized_checks = {
 required_checks = {
     "human_present": require_human,
     "opening_has_wearer": require_opening_wearer,
+    "opening_continuity": True,
     "active_demonstration": require_active_demo,
     "story_present": require_story,
     "message_present": require_message,
+    "message_legibility": require_message,
+    "silhouette_readability": True,
     "cta_present": require_cta,
     "product_truth_pass": True,
 }
+
+message_spine = review.get("message_spine", {}) if isinstance(review.get("message_spine"), dict) else {}
+editorial_rubric = (
+    review.get("editorial_rubric", {}) if isinstance(review.get("editorial_rubric"), dict) else {}
+)
+talent_direction = (
+    review.get("talent_direction", {}) if isinstance(review.get("talent_direction"), dict) else {}
+)
 
 blocking_failures = [str(item) for item in review.get("blocking_failures", []) if str(item).strip()]
 for key, required in required_checks.items():
@@ -911,24 +1069,86 @@ for key, required in required_checks.items():
         if statement not in blocking_failures:
             blocking_failures.append(statement)
 
+strengths = [str(item) for item in review.get("strengths", []) if str(item).strip()]
+weaknesses = [str(item) for item in review.get("weaknesses", []) if str(item).strip()]
+improvements = [str(item) for item in review.get("improvements", []) if str(item).strip()]
+external_overlay_signal_text = " ".join(
+    [
+        str(review.get("one_sentence_summary", "")),
+        *strengths,
+        *weaknesses,
+        *improvements,
+        *blocking_failures,
+    ]
+).lower()
+external_overlay_patterns = (
+    # Avoid generic "in-video CTA" matches because reviewers often say
+    # "No in-video CTA is present" for healthy external-overlay runs.
+    "visible in-video cta",
+    "visible in video cta",
+    "rendered in-video cta",
+    "rendered in video cta",
+    "burned-in cta",
+    "burned in cta",
+    "burned-in text",
+    "burned in text",
+    "on-screen text",
+    "on screen text",
+    "overlay text",
+    "subtitle",
+    "subtitles",
+    "caption",
+    "captions",
+    "black text bar",
+    "black bar",
+    "lower-third",
+    "lower third",
+    "gibberish",
+    "random letters",
+    "cta button",
+    "cta contamination",
+    "text contamination",
+)
+external_overlay_text_contaminated = cta_mode == "external-overlay" and (
+    normalized_checks.get("cta_present", False)
+    or any(pattern in external_overlay_signal_text for pattern in external_overlay_patterns)
+)
+if external_overlay_text_contaminated:
+    statement = "external_overlay_text_contamination"
+    if statement not in blocking_failures:
+        blocking_failures.append(statement)
+    contamination_note = (
+        "CTA mode is external-overlay, but visible in-video text/CTA contamination was detected."
+    )
+    if contamination_note not in weaknesses:
+        weaknesses.append(contamination_note)
+    contamination_fix = (
+        "Strip all burned-in text from external-overlay runs and leave clean negative space only."
+    )
+    if contamination_fix not in improvements:
+        improvements.append(contamination_fix)
+
 score_order = [
-    "human_presence",
-    "active_demonstration",
-    "message_clarity",
-    "story_structure",
-    "cta_clarity",
-    "product_truth",
-    "hook_strength",
-    "visual_quality",
+    "message_legibility",
+    "editorial_visual_execution",
+    "talent_direction",
+    "product_truth_and_motion_discipline",
 ]
 score_values = [float(scores.get(key, 0)) for key in score_order]
-average_score = round(sum(score_values) / len(score_values), 2) if score_values else 0.0
+weighted_score = round(sum(score_values), 2) if score_values else 0.0
+average_score = round(weighted_score / 10, 2) if score_values else 0.0
 technical_passed = bool(technical.get("passed")) and tech_exit == 0
-blocking_penalty = 25 + max(0, len(blocking_failures) - 1) * 5 if blocking_failures else 0
-combined_score = round(average_score * 10 + (10 if technical_passed else 0) - blocking_penalty, 2)
+combined_score = weighted_score
 raw_verdict = str(review.get("verdict", "unknown"))
 final_verdict = "fail" if blocking_failures else raw_verdict
+if final_verdict == "pass" and not normalized_checks["talent_direction_pass"]:
+    final_verdict = "revise"
 
+review["verdict"] = final_verdict
+review["blocking_failures"] = blocking_failures
+review["strengths"] = strengths
+review["weaknesses"] = weaknesses
+review["improvements"] = improvements
 review_json.write_text(json.dumps(review, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 normalized = {
     "videoPath": video_path,
@@ -948,10 +1168,24 @@ normalized = {
     "averageGeminiScore": average_score,
     "combinedScore": combined_score,
     "scores": scores,
+    "messageSpine": {
+        "id": message_spine.get("id"),
+        "aligned": bool(message_spine.get("aligned", False)),
+        "note": message_spine.get("note", ""),
+    },
+    "editorialRubric": editorial_rubric,
+    "talentDirectionReview": {
+        "score": talent_direction.get("score", 0),
+        "pass": bool(talent_direction.get("pass", False)),
+        "note": talent_direction.get("note", ""),
+        "failureReasons": [
+            str(item) for item in talent_direction.get("failure_reasons", []) if str(item).strip()
+        ],
+    },
     "oneSentenceSummary": review.get("one_sentence_summary", ""),
-    "strengths": review.get("strengths", []),
-    "weaknesses": review.get("weaknesses", []),
-    "improvements": review.get("improvements", []),
+    "strengths": strengths,
+    "weaknesses": weaknesses,
+    "improvements": improvements,
 }
 normalized_json.write_text(json.dumps(normalized, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY_REVIEW
@@ -999,21 +1233,41 @@ review = {
     "checks": {
         "human_present": False,
         "opening_has_wearer": False,
+        "opening_continuity": False,
         "active_demonstration": False,
         "story_present": False,
         "message_present": False,
+        "message_legibility": False,
+        "silhouette_readability": False,
+        "talent_direction_pass": False,
         "cta_present": False,
         "product_truth_pass": False,
     },
+    "message_spine": {
+        "id": None,
+        "aligned": False,
+        "note": "Reviewer backend failed before message-spine alignment could be judged.",
+    },
+    "editorial_rubric": {
+        "color_palette_control": {"score": 0, "note": "not evaluated"},
+        "composition": {"score": 0, "note": "not evaluated"},
+        "alignment_blocking": {"score": 0, "note": "not evaluated"},
+        "gaze_direction": {"score": 0, "note": "not evaluated"},
+        "silhouette_readability": {"score": 0, "note": "not evaluated"},
+        "framing": {"score": 0, "note": "not evaluated"},
+        "visual_hierarchy": {"score": 0, "note": "not evaluated"},
+    },
+    "talent_direction": {
+        "score": 0,
+        "pass": False,
+        "note": "Reviewer backend failed before talent direction could be judged.",
+        "failure_reasons": ["review_backend_failed"],
+    },
     "scores": {
-        "human_presence": 0,
-        "active_demonstration": 0,
-        "message_clarity": 0,
-        "story_structure": 0,
-        "cta_clarity": 0,
-        "product_truth": 0,
-        "hook_strength": 0,
-        "visual_quality": 0,
+        "message_legibility": 0,
+        "editorial_visual_execution": 0,
+        "talent_direction": 0,
+        "product_truth_and_motion_discipline": 0,
     },
     "blocking_failures": ["review_backend_failed"],
     "one_sentence_summary": "Reviewer backend failed before ad validation could complete.",
@@ -1040,9 +1294,12 @@ normalized = {
     "requiredChecks": {
         "human_present": require_human,
         "opening_has_wearer": require_opening_wearer,
+        "opening_continuity": True,
         "active_demonstration": require_active_demo,
         "story_present": require_story,
         "message_present": require_message,
+        "message_legibility": require_message,
+        "silhouette_readability": True,
         "cta_present": require_cta,
         "product_truth_pass": True,
     },
@@ -1050,6 +1307,14 @@ normalized = {
     "averageGeminiScore": 0.0,
     "combinedScore": -40.0,
     "scores": review["scores"],
+    "messageSpine": review["message_spine"],
+    "editorialRubric": review["editorial_rubric"],
+    "talentDirectionReview": {
+        "score": 0,
+        "pass": False,
+        "note": review["talent_direction"]["note"],
+        "failureReasons": review["talent_direction"]["failure_reasons"],
+    },
     "oneSentenceSummary": review["one_sentence_summary"],
     "strengths": review["strengths"],
     "weaknesses": review["weaknesses"],
@@ -1177,6 +1442,26 @@ elif best_overall:
         "- note: no candidate passed all required ad checks.",
     ])
 
+candidate_for_notes = best_qualified or best_overall
+if candidate_for_notes:
+    message_spine = candidate_for_notes.get("messageSpine") or {}
+    talent_review = candidate_for_notes.get("talentDirectionReview") or {}
+    editorial_rubric = candidate_for_notes.get("editorialRubric") or {}
+    lines.extend(["", "## Message And Rubric Snapshot"])
+    lines.append(
+        f"- message spine: {message_spine.get('id') or 'unspecified'} (aligned={message_spine.get('aligned')})"
+    )
+    if message_spine.get("note"):
+        lines.append(f"- message spine note: {message_spine['note']}")
+    lines.append(
+        f"- talent direction: score={talent_review.get('score', 0)}, pass={talent_review.get('pass', False)}"
+    )
+    if talent_review.get("note"):
+        lines.append(f"- talent note: {talent_review['note']}")
+    for key, value in editorial_rubric.items():
+        if isinstance(value, dict):
+            lines.append(f"- {key}: score={value.get('score', 0)} note={value.get('note', '')}")
+
 if iterations:
     lines.extend(["", "## Ranking"])
     for item in iterations:
@@ -1216,12 +1501,28 @@ if best_overall:
 summary_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY_SUMMARY
 
+CALIBRATION_JSON="$OUT_DIR/calibration-summary.json"
+CALIBRATION_MD="$OUT_DIR/calibration-summary.md"
+node --experimental-strip-types apps/api/scripts/render-editorial-calibration.ts \
+	--loop-summary "$SUMMARY_JSON" \
+	--summary-md "$SUMMARY_MD" \
+	--out-json "$CALIBRATION_JSON" \
+	--out-md "$CALIBRATION_MD"
+
 cp "$SUMMARY_JSON" "$ROOT_DIR/artifacts/gemini-review-loop-latest.json"
 cp "$SUMMARY_MD" "$ROOT_DIR/artifacts/gemini-review-loop-latest.md"
 cp "$RUN_MANIFEST_JSON" "$ROOT_DIR/artifacts/gemini-review-loop-latest-manifest.json"
+cp "$REVIEW_BRIEF_JSON" "$ROOT_DIR/artifacts/gemini-review-loop-latest-review-brief.json"
+cp "$REVIEW_BRIEF_MD" "$ROOT_DIR/artifacts/gemini-review-loop-latest-review-brief.md"
 cp "$STAGE_CLASSIFICATION_JSON" "$ROOT_DIR/artifacts/gemini-review-loop-latest-stage-classification.json"
+cp "$CALIBRATION_JSON" "$ROOT_DIR/artifacts/gemini-review-loop-latest-calibration.json"
+cp "$CALIBRATION_MD" "$ROOT_DIR/artifacts/gemini-review-loop-latest-calibration.md"
 
 echo ""
 echo "Gemini review loop completed"
 echo "summary_json=$SUMMARY_JSON"
 echo "summary_md=$SUMMARY_MD"
+echo "review_brief_json=$REVIEW_BRIEF_JSON"
+echo "review_brief_md=$REVIEW_BRIEF_MD"
+echo "calibration_summary_json=$CALIBRATION_JSON"
+echo "calibration_summary_md=$CALIBRATION_MD"

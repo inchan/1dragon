@@ -165,7 +165,7 @@ export function extractGeminiText(body: GeminiGenerateContentResponse): string {
 	for (const candidate of candidates) {
 		const parts = Array.isArray(candidate.content?.parts) ? candidate.content?.parts : []
 		const text = parts
-			.map((part) => part.text?.trim() ?? '')
+			.map((part: { text?: string | null }) => part.text?.trim() ?? '')
 			.filter(Boolean)
 			.join('\n')
 			.trim()

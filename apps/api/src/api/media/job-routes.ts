@@ -15,6 +15,7 @@ import type { VideoJobRepositoryImpl, VideoVariantRepositoryImpl } from '@/infra
 import { logger } from '@/infrastructure/logging/index.js'
 import { config } from '@/shared/config.js'
 import { safeErrorMessage } from '@/shared/error-utils.js'
+import { normalizeReferenceBriefInput } from '@/application/media/reference-brief.js'
 import {
 	CREATE_JOB_DEFAULT_DURATION,
 	UNAUTHORIZED_RESPONSE,
@@ -79,6 +80,12 @@ export function createJobSubRouter(deps: {
 				? { skipWearableComposite: parsed.data.skipWearableComposite }
 				: {}),
 		})
+		const normalizedReferenceBrief = parsed.data.referenceBrief
+			? normalizeReferenceBriefInput({
+					brief: parsed.data.referenceBrief,
+					fallbackPlatforms: parsed.data.platforms,
+				})
+			: undefined
 
 		const jobId = idempotencyKey
 			? buildDeterministicJobId(user.id, idempotencyKey, parsed.data.imageUrl)
@@ -175,6 +182,12 @@ export function createJobSubRouter(deps: {
 			projectId: created.id,
 			userId: user.id,
 			imageUrl: parsed.data.imageUrl,
+			...(parsed.data.referenceBrief != null
+				? {
+						referenceBrief: parsed.data.referenceBrief,
+						normalizedReferenceBrief: normalizedReferenceBrief!,
+					}
+				: {}),
 			...(parsed.data.personaId != null ? { personaId: parsed.data.personaId } : {}),
 			...(idempotencyKey != null ? { idempotencyKey } : {}),
 			retryAttempt: 0,

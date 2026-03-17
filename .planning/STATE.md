@@ -5,21 +5,21 @@
 See: `.planning/PROJECT.md` (updated 2026-03-18)
 
 **Core value:** Turn one product brief into trustworthy, reference-backed storyline options without copying specific ads.
-**Current focus:** Phase 1 - Reset Product Source of Truth
+**Current focus:** Phase 2 - Build Input And Fact Normalization
 
 ## Current Position
 
-Phase: 1 of 6 (Reset Product Source of Truth)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-18 - Completed quick task 260318-1vk to pivot the repo to a reference-first workflow and rebuild GSD-compatible planning docs.
+Phase: 2 of 6 (Build Input And Fact Normalization)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-03-18 - Implemented the reference-first intake foundation with `referenceBrief` schema, normalizer, queue propagation, and verification evidence.
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: n/a
 - Total execution time: n/a
 
@@ -27,7 +27,8 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 0 | 0 | - |
+| 1 | 2 | 2 | - |
+| 2 | 1 | 1 | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -40,11 +41,13 @@ Progress: [░░░░░░░░░░] 0%
 - Pivot: video generation is paused as the primary promise; reference-first planning is the active wedge.
 - Execution: use official sources and structure-only extraction before any downstream generation work.
 - Planning: rebuild PROJECT/ROADMAP/STATE first so GSD can track the new goal.
+- Intake contract: `referenceBrief` is additive, keeps `imageUrl` and top-level `platforms` as canonical transport fields, and normalizes only the reference-first planning inputs.
 
 ### Pending Todos
 
-- Convert Phase 1 into executable GSD plan(s).
+- Implement Phase 2 plan 02-02 for product/image and landing-page truth extraction.
 - Decide which active OpenSpec changes are paused, adapted, or archived under the new upstream contract.
+- Add persistence/debug traces for normalized intake records in Phase 2 plan 02-03.
 
 ### Blockers/Concerns
 
@@ -60,5 +63,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-03-18 01:00 KST
-Stopped at: Reference-first pivot kickoff and project-doc reset
+Stopped at: Reference-brief intake foundation implemented and verified; next step is landing-page/product truth extraction
 Resume file: None

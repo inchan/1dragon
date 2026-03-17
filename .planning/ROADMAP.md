@@ -10,7 +10,7 @@
 - Integer phases (1, 2, 3): planned milestone work
 - Decimal phases (2.1, 2.2): urgent insertions when needed
 
-- [ ] **Phase 1: Reset Product Source of Truth** - realign project docs, workflow policy, and active scope around the reference-first pivot
+- [x] **Phase 1: Reset Product Source of Truth** - realign project docs, workflow policy, and active scope around the reference-first pivot
 - [ ] **Phase 2: Build Input And Fact Normalization** - turn images, product facts, and landing-page truth into structured intake records
 - [ ] **Phase 3: Collect Reference Signals Safely** - prioritize official reference surfaces and rights-safe metadata capture
 - [ ] **Phase 4: Extract Patterns And Rank Storylines** - convert collected references into reusable structures and scored storyline options
@@ -30,8 +30,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Rebuild GSD source-of-truth docs for the reference-first pivot
-- [ ] 01-02: Align top-level product docs and workflow policy with the new operating model
+- [x] 01-01: Rebuild GSD source-of-truth docs for the reference-first pivot
+- [x] 01-02: Align top-level product docs and workflow policy with the new operating model
 
 ### Phase 2: Build Input And Fact Normalization
 **Goal**: Operators can submit product assets and brief facts, and the system persists a normalized intake record that becomes the source of truth for later ranking.
@@ -44,7 +44,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Define the reference-first intake schema and validation rules
+- [x] 02-01: Define the reference-first intake schema and validation rules
 - [ ] 02-02: Add product/image and landing-page truth extraction
 - [ ] 02-03: Persist normalized brief records and expose debug traces
 
@@ -113,8 +113,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Reset Product Source of Truth | 0/2 | In progress | - |
-| 2. Build Input And Fact Normalization | 0/3 | Not started | - |
+| 1. Reset Product Source of Truth | 2/2 | Completed | 2026-03-18 |
+| 2. Build Input And Fact Normalization | 1/3 | In progress | - |
 | 3. Collect Reference Signals Safely | 0/3 | Not started | - |
 | 4. Extract Patterns And Rank Storylines | 0/3 | Not started | - |
 | 5. Deliver Operator Brief Workspace | 0/2 | Not started | - |

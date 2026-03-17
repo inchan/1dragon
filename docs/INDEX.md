@@ -1,12 +1,23 @@
 # 1Dragon Documentation
 
-> **1Dragon**: 이커머스 상품 사진을 숏폼 마케팅 영상으로 자동 변환하는 AI 솔루션
+> **1Dragon**: 브리프 분해, 공식 레퍼런스 수집, 패턴 추출, storyline 랭킹을 우선하는 reference-first ad intelligence workspace
+
+## Current Reading Order
+
+1. `README.md`
+2. `.planning/PROJECT.md`
+3. `.planning/ROADMAP.md`
+4. `WORKFLOW.md`
+
+`docs/` 아래에는 현재 pivot 기준 문서와 이전 shortform/video 단계 문서가 함께 있습니다. 별도 pivot note가 없는 문서는 historical 또는 runtime-reference 문서일 수 있습니다.
 
 ## 📚 Documentation Index
 
 ### 1. Research (조사 및 분석)
 - **[시장 조사 (Market Research)](01-research/MARKET_RESEARCH.md)**: 시장 규모, 경쟁 현황, 규제 환경
 - **[기술 조사 (Tech Research)](01-research/TECH_RESEARCH.md)**: AI 모델 비교, 기술 스택, 아키텍처
+- **[autoresearch 통합 리서치](01-research/AUTORESEARCH_INTEGRATION_RESEARCH_2026-03-14.md)**: Andrej Karpathy의 autoresearch를 Claude Code / Codex / 1dragon 워크플로에 적용하는 비교 분석
+- **[autoresearch 스킬 v0 가이드](01-research/AUTORESEARCH_SKILL_V0_GUIDE.md)**: 시장·경쟁 조사용 내부 Codex 스킬의 목적, 입력 계약, 출력 형식, 저장 규약
 - **[사용자 조사 (User Research)](01-research/user-research/hub.md)**
   - [사용자 페르소나](01-research/user-research/01-personas.md)
   - [시장 규모 (TAM/SAM/SOM)](01-research/user-research/02-market-size.md)
@@ -25,11 +36,11 @@
 - **[MVP 범위 (MVP Scope)](03-product/MVP_SCOPE.md)**: MVP 기능, 일정, 마일스톤
 - **[기능 명세서 (Feature Spec)](03-product/FEATURE_SPEC.md)**: 상세 기능 정의, 예외 처리
 - **[사용자 플로우 (User Flows)](03-product/USER_FLOWS.md)**: UX 플로우, 와이어프레임
-- **[숏폼 커머스 실전 제작 SOP](03-product/SHORTFORM_COMMERCE_PRODUCTION_SOP.md)**: 조사→탐색→분석→계획→구현→테스트→리뷰 기반 실행 지침
+- **[숏폼 커머스 실전 제작 SOP](03-product/SHORTFORM_COMMERCE_PRODUCTION_SOP.md)**: prior shortform production SOP; 현재는 reference/ranking 단계 이후 downstream 제작 참고 문서
   - [15초 샷리스트 템플릿](03-product/templates/shortform_15s_shotlist.csv)
   - [A/B 테스트 매트릭스 템플릿](03-product/templates/ab_test_matrix.csv)
   - [7일 제작 콜시트 템플릿](03-product/templates/production_callsheet_7day.md)
-- **[인플루언서형 광고 영상 실행 문서](03-product/INFLUENCER_AD_WORKFLOW_EXECUTION.md)**: X 사례 조사 기반 목표/목적 정의, 프롬프트 v2, 실행 로그
+- **[인플루언서형 광고 영상 실행 문서](03-product/INFLUENCER_AD_WORKFLOW_EXECUTION.md)**: historical execution note for earlier video-first experiments
 
 ### 4. Simulation (검증 및 시뮬레이션)
 - **[변증법 분석 (Dialectic Analysis)](04-simulation/dialectic-analysis/hub.md)**

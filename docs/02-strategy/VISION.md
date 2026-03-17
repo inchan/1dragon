@@ -5,6 +5,11 @@
 > **기반 데이터:** Phase 1 리서치 (시장 조사, 기술 조사, 사용자 조사)
 > **문서 상태:** 전략 초안 — 경영진 리뷰 대기
 
+> **2026-03-18 Pivot Update**
+> 이 문서는 `상품 사진 -> 완성 영상 자동 생성` 전제를 깔고 작성된 전략 초안입니다.
+> 현재 활성 방향은 `reference-first ad intelligence`: 제품 사실, 시장 언어, 플랫폼 문법, 공식 광고 레퍼런스를 조합해 운영자가 먼저 검토할 storyline 옵션을 만드는 것입니다.
+> 아래 본문은 historical strategy record로 유지하되, 현재 우선순위 판단은 `README.md`, `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `WORKFLOW.md`를 기준으로 합니다.
+
 ---
 
 ## 1. 미션 스테이트먼트

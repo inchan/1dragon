@@ -1,75 +1,69 @@
-# 1Dragon - AI 영상 생성 플랫폼
+# 1Dragon - Reference-First Ad Intelligence Workspace
 
-상품 사진 1장으로 15~30초 숏폼 마케팅 영상을 자동 생성하는 SaaS 플랫폼입니다.
+1Dragon은 현재 "광고를 바로 만들기"보다 "브리프를 먼저 분해하고, 공식 레퍼런스에서 구조를 추출하고, 그 결과를 제품에 맞게 재조합하는 것"을 우선하는 저장소로 재정비되고 있습니다. 활성 목표는 상품 사실, 랜딩페이지 truth, 시장 언어, 플랫폼 문법, 공식 광고 레퍼런스를 모아 `설명 가능한 storyline 추천`을 만드는 것입니다.
 
-## 🎯 프로젝트 개요
+이 저장소에는 이전 단계의 shortform 생성/검토 런타임이 그대로 남아 있습니다. 그 코드는 이제 하위 validation 인프라이며, 현재 제품의 중심 약속은 아닙니다.
 
-**타겟**: 한국 이커머스 1인 셀러 (네이버 스마트스토어, 쿠팡 셀러)
+## 현재 제품 목표
 
-**핵심 가치**:
-- 상품 사진 1장 → 15~30초 숏폼 영상 자동 생성
-- 60초 이내 생성 시간
-- TikTok/Reels/Shorts 플랫폼 동시 최적화
+- 상품 이미지 1~2장과 제품 사실을 받아 구조화된 brief 입력으로 정규화한다.
+- 공식 소스 우선의 레퍼런스/시장 언어/플랫폼 문법을 수집한다.
+- 훅 구조, 판매 각도, 증명 방식, 편집 리듬, CTA 위치 같은 패턴 단위로 저장한다.
+- 제품 적합도, 플랫폼 적합도, 신선도, 성과 신호, 권리 위험을 반영해 storyline 후보를 랭킹한다.
+- 영상 생성 전에 운영자가 검토할 수 있는 brief, angle sheet, storyline 후보군을 출력한다.
 
-**비즈니스 모델**: Freemium SaaS
-- Free: 월 3개 영상 (워터마크 포함)
-- Starter: 월 ₩29,000 (50개 영상)
-- Pro: 월 ₩99,000 (무제한 + 4K + API)
+현재 범위에서 특히 강한 축:
+- rights-safe reference collection and normalization
+- product-fact + market-language + platform-grammar synthesis
+- operator-facing storyline ranking before downstream creative production
 
-## 🛠 기술 스택
+명시적으로 이번 슬라이스에 포함하지 않는 것:
+- 영상 생성 자체를 현재 제품의 핵심 가치로 판매하는 것
+- 특정 광고 표현, 크리에이터 느낌, 음원, 자막을 베껴 쓰는 것
+- 자동 게시/자동 학습 루프
+
+## 문서 읽는 법
+
+- 현재 소스 오브 트루스는 `README.md`, `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `WORKFLOW.md`입니다.
+- `docs/` 아래 문서는 전략/리서치/이전 shortform 단계의 기록을 함께 포함합니다. 상단에 pivot note가 없는 문서는 현재 구현보다 넓거나 오래된 문맥일 수 있습니다.
+
+## 🛠 현재 저장소 기술 스택
 
 ### Frontend
-- Next.js 15 (App Router)
+- Vite
 - React 19
 - TypeScript
-- TailwindCSS + shadcn/ui
-- Zustand (상태 관리)
-- React Query (서버 상태)
+- TanStack Router
+- TanStack Query
+- shared UI package (`packages/ui`)
 
 ### Backend
-- Next.js API Routes
-- PostgreSQL 16 (Prisma ORM)
-- Redis (Upstash)
-- BullMQ (작업 큐)
-- NextAuth.js v5 (인증)
+- Hono
+- Drizzle ORM + PostgreSQL
+- Redis + BullMQ
+- Better Auth
+- Sentry
 
-### AI/Video APIs
-- **Claude Vision**: 이미지 분석
-- **Runway Gen-4 Turbo**: Image-to-Video (핵심)
-- **GPT-4o**: 카피라이팅
-- **Typecast**: TTS 내레이션
-- **Udio**: BGM 생성
-- **Deepgram**: 자막 생성
-- **Remove.bg**: 배경 제거
-- **FFmpeg**: 영상 후처리
+### AI / Media Runtime
+- Claude / Gemini 계열 이미지 분석 및 creative helpers
+- Gemini Imagen composite flow
+- Runway / Hailuo / Gemini Veo / MiniMax provider routing
+- FFmpeg composition and variant rendering
 
-### 인프라
-- Vercel (Frontend 호스팅)
-- Railway/Render (Worker 프로세스)
-- AWS S3 + CloudFront (스토리지/CDN)
-- Sentry (에러 모니터링)
-
-## 📁 프로젝트 구조
+## 📁 현재 프로젝트 구조
 
 ```
 1dragon/
-├── src/
-│   ├── app/                  # Next.js App Router
-│   │   ├── api/             # API Routes
-│   │   ├── (auth)/          # 인증 관련 페이지
-│   │   ├── (dashboard)/     # 대시보드
-│   │   └── create/          # 영상 생성 페이지
-│   ├── components/          # React 컴포넌트
-│   │   ├── ui/             # shadcn/ui 컴포넌트
-│   │   └── features/       # 기능별 컴포넌트
-│   ├── lib/                 # 유틸리티 & 설정
-│   │   ├── ai/             # AI API 클라이언트
-│   │   ├── queue/          # BullMQ 설정
-│   │   └── orchestrator/   # 영상 생성 파이프라인
-│   └── types/               # TypeScript 타입 정의
-├── prisma/                  # Prisma 스키마 & 마이그레이션
-├── public/                  # 정적 파일
-└── docs/                    # 프로젝트 문서
+├── apps/
+│   ├── web/                  # Vite + React studio UI
+│   └── api/                  # Hono API, workers, provider adapters
+├── packages/
+│   ├── shared/               # shared schemas, enums, contracts
+│   ├── ui/                   # shared UI components
+│   └── config/               # shared config/tooling
+├── docs/                     # strategy, PRD, research, operations
+├── openspec/                 # active and archived product changes
+└── tooling/                  # validation, smoke, feedback-loop scripts
 ```
 
 ## 🚀 시작하기
@@ -85,23 +79,31 @@ cp .env.example .env
 ### 2. 의존성 설치
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 3. 데이터베이스 설정
 
 ```bash
-npx prisma migrate dev
-npx prisma generate
+pnpm --filter @1dragon/api db:seed:plans
+pnpm --filter @1dragon/api db:seed:model-persona
+pnpm --filter @1dragon/api db:seed:style-presets
+pnpm --filter @1dragon/api db:seed:platform-specs
 ```
 
 ### 4. 개발 서버 실행
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
-[http://localhost:3000](http://localhost:3000) 에서 확인하세요.
+기본 로컬 엔드포인트:
+- Web: `http://localhost:5173`
+- API: `http://localhost:3001`
+
+## 레거시 downstream runtime 검증
+
+아래 스크립트들은 이전 shortform/video runtime을 검증하는 하위 도구입니다. 현재 pivot 단계에서는 "주력 제품 기능"이 아니라 이후 reference-first brief를 검증할 때 연결할 수 있는 downstream validation 자산으로 취급합니다.
 
 ## 테스트 이미지/영상 검증
 
@@ -231,7 +233,9 @@ npm run media:loop -- \
 - `artifacts/feedback-loop/<run-id>/loop-summary.md`
 - `artifacts/feedback-loop/history.jsonl` (학습 히스토리)
 
-## 📋 MVP 개발 로드맵
+## 📋 Historical MVP 메모
+
+아래 섹션은 photo-to-video SaaS를 전제로 작성된 과거 메모입니다. 현재 실행 기준은 `.planning/ROADMAP.md`를 우선합니다.
 
 ### Sprint 0: 기반 구축 (Week 1) ✅
 - [x] 프로젝트 초기화

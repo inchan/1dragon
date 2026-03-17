@@ -13,6 +13,71 @@ import {
 } from '../enums'
 import { agenticExecutionPlanSchema, agenticModeSchema } from '../agentic'
 
+export const referenceBriefTargetAudienceSchema = z.object({
+	summary: z.string().trim().min(1).max(160),
+	useCases: z.array(z.string().trim().min(1).max(120)).max(5).default([]),
+	painPoints: z.array(z.string().trim().min(1).max(120)).max(5).default([]),
+})
+
+export const referenceBriefSuccessMetricSchema = z.object({
+	name: z.string().trim().min(1).max(80),
+	target: z.string().trim().min(1).max(120).optional(),
+})
+
+export const referenceBriefQueryHintsSchema = z.object({
+	productFacts: z.array(z.string().trim().min(1).max(160)).default([]),
+	marketLanguage: z.array(z.string().trim().min(1).max(160)).default([]),
+	proofQueries: z.array(z.string().trim().min(1).max(160)).default([]),
+	competitorQueries: z.array(z.string().trim().min(1).max(160)).default([]),
+})
+
+export const referenceBriefSchema = z
+	.object({
+		productName: z.string().trim().min(1).max(160),
+		productCategoryHint: z.string().trim().min(1).max(120).optional(),
+		priceBand: z.string().trim().min(1).max(80).optional(),
+		coreBenefits: z.array(z.string().trim().min(1).max(160)).min(1).max(5),
+		differentiators: z.array(z.string().trim().min(1).max(160)).max(5).default([]),
+		proofPoints: z.array(z.string().trim().min(1).max(160)).max(5).default([]),
+		targetAudience: referenceBriefTargetAudienceSchema,
+		landingPageUrl: z.string().url().optional(),
+		landingPageText: z.string().trim().min(20).max(8_000).optional(),
+		competitorExamples: z.array(z.string().trim().min(1).max(120)).max(5).default([]),
+		categoryExamples: z.array(z.string().trim().min(1).max(120)).max(5).default([]),
+		successMetrics: z.array(referenceBriefSuccessMetricSchema).max(5).default([]),
+		platformTargets: platformSchema.array().min(1).max(3).optional(),
+	})
+	.superRefine((value, ctx) => {
+		if (!value.landingPageUrl && !value.landingPageText) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: 'landingPageUrl or landingPageText is required',
+				path: ['landingPageUrl'],
+			})
+		}
+	})
+
+export const normalizedReferenceBriefSchema = z.object({
+	productName: z.string().trim().min(1).max(160),
+	productCategoryHint: z.string().trim().min(1).max(120).optional(),
+	priceBand: z.string().trim().min(1).max(80).optional(),
+	coreBenefits: z.array(z.string().trim().min(1).max(160)).default([]),
+	differentiators: z.array(z.string().trim().min(1).max(160)).default([]),
+	proofPoints: z.array(z.string().trim().min(1).max(160)).default([]),
+	targetAudienceSummary: z.string().trim().min(1).max(160),
+	useCases: z.array(z.string().trim().min(1).max(120)).default([]),
+	painPoints: z.array(z.string().trim().min(1).max(120)).default([]),
+	landingPageUrl: z.string().url().optional(),
+	landingPageExcerpt: z.string().trim().min(1).max(240).optional(),
+	competitorExamples: z.array(z.string().trim().min(1).max(120)).default([]),
+	categoryExamples: z.array(z.string().trim().min(1).max(120)).default([]),
+	successMetrics: z.array(referenceBriefSuccessMetricSchema).default([]),
+	platformTargets: platformSchema.array().min(1).max(3),
+	queryHints: referenceBriefQueryHintsSchema,
+	missingSignals: z.array(z.string().trim().min(1).max(80)).default([]),
+	completenessScore: z.number().min(0).max(100),
+})
+
 // ── Request Schemas ──────────────────────────────────────────────────────────
 
 export const createVideoJobRequestSchema = z.object({
@@ -50,6 +115,7 @@ export const createVideoJobRequestSchema = z.object({
 		.optional(),
 	recentConceptFamilies: z.array(storyConceptFamilySchema).max(5).optional(),
 	requestedConceptFamily: storyConceptFamilySchema.optional(),
+	referenceBrief: referenceBriefSchema.optional(),
 })
 
 export const retryVideoJobRequestSchema = z.object({
@@ -125,6 +191,8 @@ export type CreateVideoJobRequest = z.infer<typeof createVideoJobRequestSchema>
 export type CreateVideoJobResponse = z.infer<typeof createVideoJobResponseSchema>
 export type RetryVideoJobRequest = z.infer<typeof retryVideoJobRequestSchema>
 export type StoryConceptFamily = z.infer<typeof storyConceptFamilySchema>
+export type ReferenceBrief = z.infer<typeof referenceBriefSchema>
+export type NormalizedReferenceBrief = z.infer<typeof normalizedReferenceBriefSchema>
 export type VideoJobResponse = z.infer<typeof videoJobResponseSchema>
 export type VideoVariantResponse = z.infer<typeof videoVariantResponseSchema>
 export type VideoJobDetailResponse = z.infer<typeof videoJobDetailResponseSchema>

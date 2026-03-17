@@ -230,6 +230,154 @@ describe('createJobSubRouter', () => {
 		})
 	})
 
+	it('normalizes and enqueues reference brief data when provided', async () => {
+		const deterministicJobId = buildDeterministicJobId(
+			'user_1',
+			'reference-brief-1',
+			'https://cdn.example.com/product.png',
+		)
+		const createdJob = {
+			id: deterministicJobId,
+			userId: 'user_1',
+			status: 'QUEUED',
+			progress: 0,
+			retryCount: 0,
+			errorMessage: null,
+			inputImageUrl: 'https://cdn.example.com/product.png',
+			productAnalysisId: null,
+			modelPersonaSelectionId: null,
+			startedAt: null,
+			completedAt: null,
+			createdAt: NOW,
+			updatedAt: NOW,
+		}
+		const jobRepository = {
+			findById: vi.fn().mockResolvedValue(null),
+			create: vi.fn().mockResolvedValue(createdJob),
+			updateStatus: vi.fn().mockResolvedValue(createdJob),
+		}
+		const variantRepository = {
+			findByJobId: vi.fn().mockResolvedValue([]),
+		}
+		const app = buildApp({
+			jobRepository: jobRepository as never,
+			variantRepository: variantRepository as never,
+		})
+
+		const response = await app.fetch(
+			new Request('http://localhost/jobs', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Idempotency-Key': 'reference-brief-1',
+				},
+				body: JSON.stringify({
+					imageUrl: 'https://cdn.example.com/product.png',
+					stylePreset: 'TRENDY',
+					platforms: ['TIKTOK'],
+					referenceBrief: {
+						productName: '  Cloud Wrap Dress  ',
+						productCategoryHint: ' apparel / dresses ',
+						coreBenefits: ['Waist definition', ' waist definition '],
+						targetAudience: {
+							summary: ' office-first women ',
+							useCases: ['commute', ' commute '],
+							painPoints: ['unstyled mornings'],
+						},
+						landingPageText:
+							'  A wrap dress that keeps the waistline clear and still feels polished after work.  ',
+						competitorExamples: ['TikTok fashion ads', 'tiktok fashion ads'],
+					},
+				}),
+			}),
+		)
+
+		expect(response.status).toBe(201)
+		expect(mockAddJob).toHaveBeenCalledWith(
+			'media-generate',
+			expect.objectContaining({
+				referenceBrief: expect.objectContaining({
+					productName: 'Cloud Wrap Dress',
+				}),
+				normalizedReferenceBrief: expect.objectContaining({
+					productName: 'Cloud Wrap Dress',
+					coreBenefits: ['Waist definition'],
+					platformTargets: ['TIKTOK'],
+					queryHints: expect.objectContaining({
+						productFacts: expect.arrayContaining([
+							'Cloud Wrap Dress',
+							'apparel / dresses',
+						]),
+						competitorQueries: ['TikTok fashion ads'],
+					}),
+				}),
+			}),
+			{ jobId: createdJob.id },
+		)
+	})
+
+	it('rejects a reference brief when no landing-page source is provided', async () => {
+		const jobRepository = {
+			findById: vi.fn(),
+			create: vi.fn(),
+			updateStatus: vi.fn(),
+		}
+		const variantRepository = {
+			findByJobId: vi.fn().mockResolvedValue([]),
+		}
+		const app = buildApp({
+			jobRepository: jobRepository as never,
+			variantRepository: variantRepository as never,
+		})
+
+		const response = await app.fetch(
+			new Request('http://localhost/jobs', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					imageUrl: 'https://cdn.example.com/product.png',
+					stylePreset: 'TRENDY',
+					platforms: ['TIKTOK'],
+					referenceBrief: {
+						productName: 'Cloud Wrap Dress',
+						coreBenefits: ['Waist definition'],
+						targetAudience: {
+							summary: 'office-first women',
+							useCases: [],
+							painPoints: [],
+						},
+					},
+				}),
+			}),
+		)
+		const body = (await response.json()) as {
+			success: boolean
+			error: {
+				code: string
+				message: string
+				details?: {
+					fieldErrors?: Array<{ field: string; message: string }>
+				}
+			}
+		}
+
+		expect(response.status).toBe(400)
+		expect(body.success).toBe(false)
+		expect(body.error.code).toBe('VALIDATION')
+		expect(body.error.details?.fieldErrors).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					field: 'referenceBrief.landingPageUrl',
+					message: 'landingPageUrl or landingPageText is required',
+				}),
+			]),
+		)
+		expect(jobRepository.create).not.toHaveBeenCalled()
+		expect(mockAddJob).not.toHaveBeenCalled()
+	})
+
 	it('returns canonical job detail with ascending events and parsed variants', async () => {
 		const jobRecord = {
 			id: '22222222-2222-4222-8222-222222222222',

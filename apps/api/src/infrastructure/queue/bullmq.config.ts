@@ -3,7 +3,9 @@ import IORedis from 'ioredis'
 import type {
 	AgenticExecutionPlan,
 	AgenticMode,
+	NormalizedReferenceBrief,
 	PlanTier,
+	ReferenceBrief,
 	StoryConceptFamily,
 } from '@1dragon/shared'
 import { MediaReliabilityPolicyService } from '@/domain/media/services.js'
@@ -93,6 +95,8 @@ export interface MediaGenerateJobData {
 	projectId: string
 	userId: string
 	imageUrl: string
+	referenceBrief?: ReferenceBrief
+	normalizedReferenceBrief?: NormalizedReferenceBrief
 	personaId?: string
 	retryAttempt?: number
 	idempotencyKey?: string

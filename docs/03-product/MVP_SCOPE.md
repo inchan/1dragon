@@ -4,6 +4,11 @@
 > **기반 문서:** TECH_RESEARCH.md, USER_RESEARCH.md, VISION.md, BUSINESS_MODEL.md, GTM_STRATEGY.md
 > **문서 상태:** 프로덕트 정의 초안
 
+> **2026-03-18 Pivot Update**
+> 현재 MVP 가설은 `60초 내 영상 생성`이 아니라 `reference-first workflow가 더 나은 storyline 결정을 만든다`로 바뀌었습니다.
+> 활성 MVP는 제품 사실 입력, 공식 레퍼런스 수집, 패턴 추출, storyline 랭킹, operator review를 우선 검증합니다.
+> 아래 본문은 video-first MVP 가설의 historical record로 남기며, 현재 실행 기준은 `.planning/PROJECT.md`와 `.planning/ROADMAP.md`를 따릅니다.
+
 ---
 
 ## 1. MVP 목표

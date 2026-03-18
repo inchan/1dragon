@@ -1078,6 +1078,124 @@ describe('createJobSubRouter', () => {
 		expect(response.status).toBe(409)
 	})
 
+	it('returns official-source discovery targets from persisted intake', async () => {
+		const jobRecord = {
+			id: '22222222-2222-4222-8222-222222222222',
+			userId: 'user_1',
+			status: 'SUCCEEDED',
+			progress: 100,
+			retryCount: 0,
+			errorMessage: null,
+			inputImageUrl: 'https://cdn.example.com/product.png',
+			productAnalysisId: '11111111-1111-4111-8111-111111111111',
+			referenceIntake: {
+				referenceBrief: {
+					productName: 'Metro Sling Bag',
+					productCategoryHint: 'accessories',
+					coreBenefits: ['hands-free commute'],
+					targetAudience: {
+						summary: 'city commuters',
+						useCases: ['commute'],
+						painPoints: [],
+					},
+					landingPageText: 'A slim sling bag built for urban commutes and quick access essentials.',
+					differentiators: ['water-resistant finish'],
+					proofPoints: [],
+					competitorExamples: [],
+					categoryExamples: ['everyday carry'],
+					successMetrics: [],
+				},
+				normalizedReferenceBrief: {
+					productName: 'Metro Sling Bag',
+					productCategoryHint: 'accessories',
+					productAnalysisId: '11111111-1111-4111-8111-111111111111',
+					coreBenefits: ['hands-free commute'],
+					differentiators: ['water-resistant finish'],
+					proofPoints: [],
+					targetAudienceSummary: 'city commuters',
+					useCases: ['commute'],
+					painPoints: [],
+					landingPageExcerpt: 'A slim sling bag built for urban commutes and quick access essentials.',
+					landingPageSource: 'provided_text',
+					competitorExamples: [],
+					categoryExamples: ['everyday carry'],
+					successMetrics: [],
+					platformTargets: ['TIKTOK', 'INSTAGRAM_REELS'],
+					queryHints: {
+						productFacts: ['Metro Sling Bag', 'accessories', 'hands-free commute'],
+						marketLanguage: ['city commuters', 'commute'],
+						proofQueries: ['hands-free commute'],
+						competitorQueries: ['everyday carry'],
+					},
+					taxonomy: {
+						category: 'ACCESSORIES',
+						source: 'merged',
+						usageContexts: ['COMMUTE', 'ON_BODY'],
+					},
+					missingSignals: ['price_band', 'proof_points', 'reference_examples', 'success_metrics'],
+					completenessScore: 40,
+				},
+				taxonomy: {
+					category: 'ACCESSORIES',
+					source: 'merged',
+					usageContexts: ['COMMUTE', 'ON_BODY'],
+				},
+				productAnalysisId: '11111111-1111-4111-8111-111111111111',
+			},
+			modelPersonaSelectionId: null,
+			startedAt: NOW,
+			completedAt: ONE_MINUTE_LATER,
+			createdAt: NOW,
+			updatedAt: ONE_MINUTE_LATER,
+		}
+		const app = buildApp({
+			jobRepository: {
+				findById: vi.fn().mockResolvedValue(jobRecord),
+				create: vi.fn(),
+				updateStatus: vi.fn(),
+			} as never,
+			variantRepository: {
+				findByJobId: vi.fn().mockResolvedValue([]),
+			} as never,
+		})
+
+		const response = await app.fetch(
+			new Request(`http://localhost/jobs/${jobRecord.id}/reference-sources`),
+		)
+		const body = (await response.json()) as {
+			data: {
+				jobId: string
+				targets: Array<{
+					source: string
+					adapter: string
+					entryUrl?: string
+				}>
+			}
+		}
+
+		expect(response.status).toBe(200)
+		expect(body.data.jobId).toBe(jobRecord.id)
+		expect(body.data.targets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					source: 'TIKTOK_CREATIVE_CENTER',
+					adapter: 'open_url',
+					entryUrl: 'https://ads.tiktok.com/business/creativecenter/',
+				}),
+				expect.objectContaining({
+					source: 'META_AD_LIBRARY',
+					adapter: 'open_url',
+					entryUrl: 'https://www.facebook.com/ads/library/',
+				}),
+				expect.objectContaining({
+					source: 'GOOGLE_TRENDS',
+					adapter: 'open_url',
+					entryUrl: 'https://trends.google.com/trends/',
+				}),
+			]),
+		)
+	})
+
 	it('marks the job failed and returns 503 when enqueue fails', async () => {
 		const createdJob = {
 			id: '44444444-4444-4444-8444-444444444444',

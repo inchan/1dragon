@@ -166,6 +166,19 @@ export const officialReferenceQueryPlanSchema = z.object({
 	items: z.array(officialReferenceQueryPlanItemSchema).min(1).max(12),
 })
 
+export const officialReferenceDiscoveryTargetSchema = officialReferenceQueryPlanItemSchema.extend({
+	adapter: z.enum(['open_url', 'manual_search']),
+	surfaceLabel: z.string().trim().min(1).max(120),
+	entryUrl: z.string().url().optional(),
+	captureMode: z.enum(['structure_only', 'doc_library', 'derived_metadata']),
+})
+
+export const officialReferenceDiscoveryBundleSchema = z.object({
+	jobId: z.string().uuid(),
+	taxonomy: referenceBriefTaxonomySchema,
+	targets: z.array(officialReferenceDiscoveryTargetSchema).min(1).max(12),
+})
+
 // ── Request Schemas ──────────────────────────────────────────────────────────
 
 export const createVideoJobRequestSchema = z.object({
@@ -290,6 +303,8 @@ export type ReferenceIntakeProductAnalysis = z.infer<typeof referenceIntakeProdu
 export type ReferenceIntake = z.infer<typeof referenceIntakeSchema>
 export type OfficialReferenceQueryPlan = z.infer<typeof officialReferenceQueryPlanSchema>
 export type OfficialReferenceQueryPlanItem = z.infer<typeof officialReferenceQueryPlanItemSchema>
+export type OfficialReferenceDiscoveryTarget = z.infer<typeof officialReferenceDiscoveryTargetSchema>
+export type OfficialReferenceDiscoveryBundle = z.infer<typeof officialReferenceDiscoveryBundleSchema>
 export type VideoJobResponse = z.infer<typeof videoJobResponseSchema>
 export type VideoVariantResponse = z.infer<typeof videoVariantResponseSchema>
 export type VideoJobDetailResponse = z.infer<typeof videoJobDetailResponseSchema>

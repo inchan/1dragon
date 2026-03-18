@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Hono } from 'hono'
 
 const {
@@ -133,6 +133,10 @@ describe('createJobSubRouter', () => {
 
 			return createEventSelectResult(mockJobEventRows())
 		})
+	})
+
+	afterEach(() => {
+		vi.unstubAllGlobals()
 	})
 
 	it('creates a job, enqueues media-generate, and returns 201 with canonical job id', async () => {
@@ -373,6 +377,188 @@ describe('createJobSubRouter', () => {
 		)
 		expect(jobRepository.create).not.toHaveBeenCalled()
 		expect(mockAddJob).not.toHaveBeenCalled()
+	})
+
+	it('fetches landing-page truth when only a url is provided', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(
+				new Response(
+					`
+						<html>
+							<head>
+								<title>Cloud Wrap Dress | 1Dragon</title>
+								<meta
+									name="description"
+									content="Polished wrap silhouette for commute days."
+								/>
+							</head>
+							<body>
+								<main>
+									<h1>Cloud Wrap Dress</h1>
+									<p>Made for office mornings and after-work dinners.</p>
+								</main>
+							</body>
+						</html>
+					`,
+					{ headers: { 'content-type': 'text/html; charset=utf-8' } },
+				),
+			),
+		)
+
+		const createdJob = {
+			id: buildDeterministicJobId(
+				'user_1',
+				'reference-brief-url-1',
+				'https://cdn.example.com/product.png',
+			),
+			userId: 'user_1',
+			status: 'QUEUED',
+			progress: 0,
+			retryCount: 0,
+			errorMessage: null,
+			inputImageUrl: 'https://cdn.example.com/product.png',
+			productAnalysisId: null,
+			modelPersonaSelectionId: null,
+			startedAt: null,
+			completedAt: null,
+			createdAt: NOW,
+			updatedAt: NOW,
+		}
+		const app = buildApp({
+			jobRepository: {
+				findById: vi.fn().mockResolvedValue(null),
+				create: vi.fn().mockResolvedValue(createdJob),
+				updateStatus: vi.fn().mockResolvedValue(createdJob),
+			} as never,
+			variantRepository: {
+				findByJobId: vi.fn().mockResolvedValue([]),
+			} as never,
+		})
+
+		const response = await app.fetch(
+			new Request('http://localhost/jobs', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Idempotency-Key': 'reference-brief-url-1',
+				},
+				body: JSON.stringify({
+					imageUrl: 'https://cdn.example.com/product.png',
+					stylePreset: 'TRENDY',
+					platforms: ['TIKTOK'],
+					referenceBrief: {
+						productName: 'Cloud Wrap Dress',
+						coreBenefits: ['Waist definition'],
+						targetAudience: {
+							summary: 'office-first women',
+							useCases: ['commute'],
+							painPoints: [],
+						},
+						landingPageUrl: 'https://example.com/products/cloud-wrap-dress',
+					},
+				}),
+			}),
+		)
+
+		expect(response.status).toBe(201)
+		const payload = mockAddJob.mock.calls[0]?.[1] as {
+			normalizedReferenceBrief?: {
+				landingPageSource: string
+				landingPageTitle?: string
+				landingPageDescription?: string
+				landingPageExcerpt?: string
+				missingSignals: string[]
+			}
+		}
+
+		expect(payload.normalizedReferenceBrief).toMatchObject({
+			landingPageSource: 'fetched_url',
+			landingPageTitle: 'Cloud Wrap Dress | 1Dragon',
+			landingPageDescription: 'Polished wrap silhouette for commute days.',
+		})
+		expect(payload.normalizedReferenceBrief?.landingPageExcerpt).toContain('Cloud Wrap Dress')
+		expect(payload.normalizedReferenceBrief?.missingSignals).not.toContain('landing_page_text')
+	})
+
+	it('falls back safely when landing-page fetch fails', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')))
+
+		const createdJob = {
+			id: buildDeterministicJobId(
+				'user_1',
+				'reference-brief-url-fail-1',
+				'https://cdn.example.com/product.png',
+			),
+			userId: 'user_1',
+			status: 'QUEUED',
+			progress: 0,
+			retryCount: 0,
+			errorMessage: null,
+			inputImageUrl: 'https://cdn.example.com/product.png',
+			productAnalysisId: null,
+			modelPersonaSelectionId: null,
+			startedAt: null,
+			completedAt: null,
+			createdAt: NOW,
+			updatedAt: NOW,
+		}
+		const app = buildApp({
+			jobRepository: {
+				findById: vi.fn().mockResolvedValue(null),
+				create: vi.fn().mockResolvedValue(createdJob),
+				updateStatus: vi.fn().mockResolvedValue(createdJob),
+			} as never,
+			variantRepository: {
+				findByJobId: vi.fn().mockResolvedValue([]),
+			} as never,
+		})
+
+		const response = await app.fetch(
+			new Request('http://localhost/jobs', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Idempotency-Key': 'reference-brief-url-fail-1',
+				},
+				body: JSON.stringify({
+					imageUrl: 'https://cdn.example.com/product.png',
+					stylePreset: 'TRENDY',
+					platforms: ['TIKTOK'],
+					referenceBrief: {
+						productName: 'Cloud Wrap Dress',
+						coreBenefits: ['Waist definition'],
+						targetAudience: {
+							summary: 'office-first women',
+							useCases: ['commute'],
+							painPoints: [],
+						},
+						landingPageUrl: 'https://example.com/products/cloud-wrap-dress',
+					},
+				}),
+			}),
+		)
+
+		expect(response.status).toBe(201)
+		const payload = mockAddJob.mock.calls[0]?.[1] as {
+			normalizedReferenceBrief?: {
+				landingPageSource: string
+				landingPageUrl?: string
+				landingPageTitle?: string
+				landingPageDescription?: string
+				landingPageExcerpt?: string
+				missingSignals: string[]
+			}
+		}
+
+		expect(payload.normalizedReferenceBrief?.landingPageSource).toBe('url_only')
+		expect(payload.normalizedReferenceBrief?.landingPageUrl).toBe(
+			'https://example.com/products/cloud-wrap-dress',
+		)
+		expect(payload.normalizedReferenceBrief?.landingPageTitle).toBeUndefined()
+		expect(payload.normalizedReferenceBrief?.landingPageDescription).toBeUndefined()
+		expect(payload.normalizedReferenceBrief?.landingPageExcerpt).toBeUndefined()
+		expect(payload.normalizedReferenceBrief?.missingSignals).toContain('landing_page_text')
 	})
 
 	it('returns canonical job detail with ascending events and parsed variants', async () => {

@@ -12,7 +12,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-18)
 Phase: 2 of 6 (Build Input And Fact Normalization)
 Plan: 1 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-18 - Implemented the reference-first intake foundation with `referenceBrief` schema, normalizer, queue propagation, and verification evidence.
+Last activity: 2026-03-18 - Added best-effort landing-page truth extraction for URL-only reference briefs and recorded the next OpenSpec slice for Phase 2 `02-02`.
 
 Progress: [██░░░░░░░░] 20%
 
@@ -42,10 +42,11 @@ Progress: [██░░░░░░░░] 20%
 - Execution: use official sources and structure-only extraction before any downstream generation work.
 - Planning: rebuild PROJECT/ROADMAP/STATE first so GSD can track the new goal.
 - Intake contract: `referenceBrief` is additive, keeps `imageUrl` and top-level `platforms` as canonical transport fields, and normalizes only the reference-first planning inputs.
+- Landing-page truth: remote URL fetch is best-effort, bounded by timeout, and enriches only `normalizedReferenceBrief`, never the raw operator brief.
 
 ### Pending Todos
 
-- Implement Phase 2 plan 02-02 for product/image and landing-page truth extraction.
+- Finish the remaining Phase 2 `02-02` gap by wiring product/image analysis into a stable category and usage taxonomy.
 - Decide which active OpenSpec changes are paused, adapted, or archived under the new upstream contract.
 - Add persistence/debug traces for normalized intake records in Phase 2 plan 02-03.
 
@@ -63,5 +64,5 @@ Progress: [██░░░░░░░░] 20%
 ## Session Continuity
 
 Last session: 2026-03-18 01:00 KST
-Stopped at: Reference-brief intake foundation implemented and verified; next step is landing-page/product truth extraction
+Stopped at: Landing-page truth extraction added; next step is taxonomy enrichment plus normalized-intake persistence
 Resume file: None

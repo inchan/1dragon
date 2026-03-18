@@ -41,6 +41,7 @@ describe('reference brief normalization', () => {
 		expect(normalized.queryHints.competitorQueries).toEqual(['TikTok fashion ads', 'office look'])
 		expect(normalized.missingSignals).toEqual([])
 		expect(normalized.completenessScore).toBe(100)
+		expect(normalized.landingPageSource).toBe('provided_text')
 	})
 
 	it('falls back to request platforms and surfaces missing signals', () => {
@@ -74,5 +75,73 @@ describe('reference brief normalization', () => {
 			'landing_page_text',
 		])
 		expect(normalized.completenessScore).toBe(40)
+	})
+
+	it('propagates fetched landing-page metadata into the normalized brief', () => {
+		const brief: ReferenceBrief = {
+			productName: 'Cloud Wrap Dress',
+			coreBenefits: ['Waist definition'],
+			targetAudience: {
+				summary: 'office-first women',
+				useCases: ['commute'],
+				painPoints: [],
+			},
+			landingPageUrl: 'https://example.com/products/cloud-wrap-dress',
+			differentiators: [],
+			proofPoints: [],
+			competitorExamples: [],
+			categoryExamples: [],
+			successMetrics: [],
+		}
+
+		const normalized = normalizeReferenceBriefInput({
+			brief,
+			fallbackPlatforms: ['TIKTOK'],
+			resolvedLandingPage: {
+				source: 'fetched_url',
+				title: 'Cloud Wrap Dress | 1Dragon',
+				description: 'Polished wrap silhouette for commute days.',
+				text: 'Cloud Wrap Dress made for office mornings and after-work dinners.',
+			},
+		})
+
+		expect(normalized.landingPageSource).toBe('fetched_url')
+		expect(normalized.landingPageTitle).toBe('Cloud Wrap Dress | 1Dragon')
+		expect(normalized.landingPageDescription).toBe('Polished wrap silhouette for commute days.')
+		expect(normalized.landingPageExcerpt).toContain('Cloud Wrap Dress made for office mornings')
+		expect(normalized.missingSignals).not.toContain('landing_page_text')
+	})
+
+	it('bounds fetched landing-page metadata to schema-safe lengths', () => {
+		const brief: ReferenceBrief = {
+			productName: 'Cloud Wrap Dress',
+			coreBenefits: ['Waist definition'],
+			targetAudience: {
+				summary: 'office-first women',
+				useCases: ['commute'],
+				painPoints: [],
+			},
+			landingPageUrl: 'https://example.com/products/cloud-wrap-dress',
+			differentiators: [],
+			proofPoints: [],
+			competitorExamples: [],
+			categoryExamples: [],
+			successMetrics: [],
+		}
+
+		const normalized = normalizeReferenceBriefInput({
+			brief,
+			fallbackPlatforms: ['TIKTOK'],
+			resolvedLandingPage: {
+				source: 'fetched_url',
+				title: 'T'.repeat(220),
+				description: 'D'.repeat(300),
+				text: 'X'.repeat(400),
+			},
+		})
+
+		expect(normalized.landingPageTitle).toHaveLength(160)
+		expect(normalized.landingPageDescription).toHaveLength(240)
+		expect(normalized.landingPageExcerpt).toHaveLength(240)
 	})
 })

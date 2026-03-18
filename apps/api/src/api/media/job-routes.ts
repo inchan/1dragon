@@ -15,6 +15,7 @@ import type { VideoJobRepositoryImpl, VideoVariantRepositoryImpl } from '@/infra
 import { logger } from '@/infrastructure/logging/index.js'
 import { config } from '@/shared/config.js'
 import { safeErrorMessage } from '@/shared/error-utils.js'
+import { resolveLandingPageTruth } from '@/application/media/landing-page-truth.js'
 import { normalizeReferenceBriefInput } from '@/application/media/reference-brief.js'
 import {
 	CREATE_JOB_DEFAULT_DURATION,
@@ -84,6 +85,14 @@ export function createJobSubRouter(deps: {
 			? normalizeReferenceBriefInput({
 					brief: parsed.data.referenceBrief,
 					fallbackPlatforms: parsed.data.platforms,
+					resolvedLandingPage: await resolveLandingPageTruth({
+						...(parsed.data.referenceBrief.landingPageUrl
+							? { landingPageUrl: parsed.data.referenceBrief.landingPageUrl }
+							: {}),
+						...(parsed.data.referenceBrief.landingPageText
+							? { landingPageText: parsed.data.referenceBrief.landingPageText }
+							: {}),
+					}),
 				})
 			: undefined
 

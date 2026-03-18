@@ -31,6 +31,8 @@ export const referenceBriefQueryHintsSchema = z.object({
 	competitorQueries: z.array(z.string().trim().min(1).max(160)).default([]),
 })
 
+export const landingPageSourceSchema = z.enum(['provided_text', 'fetched_url', 'url_only'])
+
 export const referenceBriefSchema = z
 	.object({
 		productName: z.string().trim().min(1).max(160),
@@ -69,6 +71,9 @@ export const normalizedReferenceBriefSchema = z.object({
 	painPoints: z.array(z.string().trim().min(1).max(120)).default([]),
 	landingPageUrl: z.string().url().optional(),
 	landingPageExcerpt: z.string().trim().min(1).max(240).optional(),
+	landingPageTitle: z.string().trim().min(1).max(160).optional(),
+	landingPageDescription: z.string().trim().min(1).max(240).optional(),
+	landingPageSource: landingPageSourceSchema,
 	competitorExamples: z.array(z.string().trim().min(1).max(120)).default([]),
 	categoryExamples: z.array(z.string().trim().min(1).max(120)).default([]),
 	successMetrics: z.array(referenceBriefSuccessMetricSchema).default([]),

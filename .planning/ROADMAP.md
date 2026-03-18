@@ -48,6 +48,8 @@ Plans:
 - [ ] 02-02: Add product/image and landing-page truth extraction
 - [ ] 02-03: Persist normalized brief records and expose debug traces
 
+Status note: landing-page truth extraction is implemented; the remaining `02-02` gap is stable category and usage taxonomy enrichment from product/image analysis.
+
 ### Phase 3: Collect Reference Signals Safely
 **Goal**: The system gathers official reference signals and market-language inputs without depending on infringing media capture.
 **Depends on**: Phase 2

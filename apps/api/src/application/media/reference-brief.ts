@@ -4,10 +4,12 @@ import {
 	type Platform,
 	type ReferenceBrief,
 } from '@1dragon/shared'
+import type { ResolvedLandingPageTruth } from './landing-page-truth.js'
 
 type NormalizeReferenceBriefInput = {
 	readonly brief: ReferenceBrief
 	readonly fallbackPlatforms?: ReadonlyArray<Platform>
+	readonly resolvedLandingPage?: ResolvedLandingPageTruth
 }
 
 function normalizeText(value: string | undefined): string | undefined {
@@ -48,6 +50,15 @@ function buildLandingPageExcerpt(value: string | undefined): string | undefined 
 	}
 
 	return normalized.slice(0, 240)
+}
+
+function buildLandingPageTitle(value: string | undefined): string | undefined {
+	const normalized = normalizeText(value)?.replace(/\s+/g, ' ')
+	if (!normalized) {
+		return undefined
+	}
+
+	return normalized.slice(0, 160)
 }
 
 function buildQueryHints(input: {
@@ -161,7 +172,15 @@ export function normalizeReferenceBriefInput(
 		return target ? { name: metric.name.trim(), target } : { name: metric.name.trim() }
 	})
 	const landingPageUrl = normalizeText(input.brief.landingPageUrl)
-	const landingPageExcerpt = buildLandingPageExcerpt(input.brief.landingPageText)
+	const resolvedLandingPage = input.resolvedLandingPage ?? {
+		source: input.brief.landingPageText ? ('provided_text' as const) : ('url_only' as const),
+		...(input.brief.landingPageText ? { text: input.brief.landingPageText } : {}),
+	}
+	const landingPageTitle = buildLandingPageTitle(resolvedLandingPage.title)
+	const landingPageDescription = buildLandingPageExcerpt(resolvedLandingPage.description)
+	const landingPageExcerpt = buildLandingPageExcerpt(
+		resolvedLandingPage.text ?? resolvedLandingPage.description ?? resolvedLandingPage.title,
+	)
 	const platformTargets = normalizePlatforms(
 		input.brief.platformTargets && input.brief.platformTargets.length > 0
 			? input.brief.platformTargets
@@ -207,6 +226,9 @@ export function normalizeReferenceBriefInput(
 		painPoints,
 		...(landingPageUrl ? { landingPageUrl } : {}),
 		...(landingPageExcerpt ? { landingPageExcerpt } : {}),
+		...(landingPageTitle ? { landingPageTitle } : {}),
+		...(landingPageDescription ? { landingPageDescription } : {}),
+		landingPageSource: resolvedLandingPage.source,
 		competitorExamples,
 		categoryExamples,
 		successMetrics,

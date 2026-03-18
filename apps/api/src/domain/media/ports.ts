@@ -1,4 +1,4 @@
-import type { Platform, StylePreset } from '@1dragon/shared'
+import type { Platform, ReferenceIntake, StylePreset } from '@1dragon/shared'
 import type {
 	ConceptCandidate,
 	PromptCompilationDebug,
@@ -152,6 +152,7 @@ export interface VideoJobRecord {
 	readonly status: string
 	readonly inputImageUrl: string
 	readonly productAnalysisId: string | null
+	readonly referenceIntake: ReferenceIntake | null
 	readonly modelPersonaSelectionId: string | null
 	readonly progress: number
 	readonly errorMessage: string | null
@@ -181,6 +182,7 @@ export interface VideoJobCreateInput {
 	readonly inputImageUrl: string
 	readonly id?: string
 	readonly productAnalysisId?: string | null
+	readonly referenceIntake?: ReferenceIntake | null
 	readonly modelPersonaSelectionId?: string | null
 	readonly status?: string
 	readonly retryCount?: number
@@ -214,7 +216,10 @@ export interface VideoJobRepository {
 		readonly startedAt?: Date
 		readonly completedAt?: Date
 	}): Promise<VideoJobRecord | null>
-	findByUserId(userId: string, query: VideoJobHistoryQuery): Promise<{
+	findByUserId(
+		userId: string,
+		query: VideoJobHistoryQuery,
+	): Promise<{
 		items: VideoJobRecord[]
 		total: number
 	}>

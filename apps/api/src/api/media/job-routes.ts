@@ -1,24 +1,39 @@
 import { randomUUID } from 'node:crypto'
-import { and, count, desc, eq, gte } from 'drizzle-orm'
-import { Hono } from 'hono'
-import { ErrorCode, PlanTier, resolveAgenticExecutionPlan } from '@1dragon/shared'
-import { DailyPublishHealthService, MediaReliabilityPolicyService } from '@/domain/media/services.js'
-import { db } from '@/infrastructure/persistence/db.js'
-import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
-import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
-import {
-	QueueName,
-	addJob,
-	type MediaGenerateJobData,
-} from '@/infrastructure/queue/bullmq.config.js'
-import type { VideoJobRepositoryImpl, VideoVariantRepositoryImpl } from '@/infrastructure/persistence/repositories/video-job.repository.js'
-import { logger } from '@/infrastructure/logging/index.js'
-import { config } from '@/shared/config.js'
-import { safeErrorMessage } from '@/shared/error-utils.js'
 import { resolveLandingPageTruth } from '@/application/media/landing-page-truth.js'
+import { buildOfficialReferenceQueryPlan } from '@/application/media/reference-query-plan.js'
 import { normalizeReferenceBriefInput } from '@/application/media/reference-brief.js'
 import {
+	DailyPublishHealthService,
+	MediaReliabilityPolicyService,
+} from '@/domain/media/services.js'
+import type { ProductAnalysisRepository } from '@/domain/product/ports.js'
+import { logger } from '@/infrastructure/logging/index.js'
+import { db } from '@/infrastructure/persistence/db.js'
+import { appendJobStatusEvent } from '@/infrastructure/persistence/job-event.helper.js'
+import { ProductAnalysisRepositoryImpl } from '@/infrastructure/persistence/repositories/product-analysis.repository.js'
+import type {
+	VideoJobRepositoryImpl,
+	VideoVariantRepositoryImpl,
+} from '@/infrastructure/persistence/repositories/video-job.repository.js'
+import { jobEvents, subscriptions, videoJobs } from '@/infrastructure/persistence/schema.js'
+import {
+	type MediaGenerateJobData,
+	QueueName,
+	addJob,
+} from '@/infrastructure/queue/bullmq.config.js'
+import { config } from '@/shared/config.js'
+import { safeErrorMessage } from '@/shared/error-utils.js'
+import {
+	ErrorCode,
+	PlanTier,
+	type ReferenceIntake,
+	resolveAgenticExecutionPlan,
+} from '@1dragon/shared'
+import { and, count, desc, eq, gte } from 'drizzle-orm'
+import { Hono } from 'hono'
+import {
 	CREATE_JOB_DEFAULT_DURATION,
+	type JobStatusEvent,
 	UNAUTHORIZED_RESPONSE,
 	buildDeterministicJobId,
 	createJobRequestSchema,
@@ -29,15 +44,17 @@ import {
 	toJobStatusEventFromDbPayload,
 	toJobStatusResponse,
 	toRecord,
-	type JobStatusEvent,
 } from './helpers.js'
 
 export function createJobSubRouter(deps: {
 	jobRepository: VideoJobRepositoryImpl
 	variantRepository: VideoVariantRepositoryImpl
+	productAnalysisRepository?: ProductAnalysisRepository
 }): Hono {
 	const app = new Hono()
 	const { jobRepository, variantRepository } = deps
+	const productAnalysisRepository =
+		deps.productAnalysisRepository ?? new ProductAnalysisRepositoryImpl()
 	const reliabilityPolicy = new MediaReliabilityPolicyService().getDailyPublishHealthPolicy()
 	const dailyPublishHealthService = new DailyPublishHealthService(reliabilityPolicy)
 
@@ -57,6 +74,31 @@ export function createJobSubRouter(deps: {
 						code: ErrorCode.VALIDATION,
 						message: 'Validation failed',
 						details: { fieldErrors: mapFieldErrors(parsed.error.errors) },
+					},
+				},
+				400,
+			)
+		}
+
+		const productAnalysisId = parsed.data.productAnalysisId
+		const productAnalysis = productAnalysisId
+			? await productAnalysisRepository.findById(productAnalysisId, user.id)
+			: null
+		if (productAnalysisId && !productAnalysis) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: ErrorCode.VALIDATION,
+						message: 'Validation failed',
+						details: {
+							fieldErrors: [
+								{
+									field: 'productAnalysisId',
+									message: 'productAnalysisId must reference an analysis owned by the current user',
+								},
+							],
+						},
 					},
 				},
 				400,
@@ -93,8 +135,41 @@ export function createJobSubRouter(deps: {
 							? { landingPageText: parsed.data.referenceBrief.landingPageText }
 							: {}),
 					}),
+					...(productAnalysis
+						? {
+								productAnalysis: {
+									id: productAnalysis.id,
+									category: productAnalysis.category,
+									keywords: [...productAnalysis.keywords],
+									...(productAnalysis.targetAudience
+										? { targetAudience: productAnalysis.targetAudience }
+										: {}),
+								},
+							}
+						: {}),
 				})
 			: undefined
+		const referenceIntake: ReferenceIntake | undefined =
+			parsed.data.referenceBrief && normalizedReferenceBrief
+				? {
+						referenceBrief: parsed.data.referenceBrief,
+						normalizedReferenceBrief,
+						taxonomy: normalizedReferenceBrief.taxonomy,
+						...(productAnalysisId ? { productAnalysisId } : {}),
+						...(productAnalysis
+							? {
+									productAnalysis: {
+										id: productAnalysis.id,
+										...(productAnalysis.category ? { category: productAnalysis.category } : {}),
+										keywords: [...productAnalysis.keywords],
+										...(productAnalysis.targetAudience
+											? { targetAudience: productAnalysis.targetAudience }
+											: {}),
+									},
+								}
+							: {}),
+					}
+				: undefined
 
 		const jobId = idempotencyKey
 			? buildDeterministicJobId(user.id, idempotencyKey, parsed.data.imageUrl)
@@ -134,18 +209,16 @@ export function createJobSubRouter(deps: {
 			orderBy: [desc(subscriptions.createdAt)],
 		})
 		const planTier =
-			currentSubscription?.plan?.tier === PlanTier.STARTER
-				? PlanTier.STARTER
-				: PlanTier.FREE
+			currentSubscription?.plan?.tier === PlanTier.STARTER ? PlanTier.STARTER : PlanTier.FREE
 
-		let created:
-			| Awaited<ReturnType<(typeof jobRepository)['create']>>
-			| null = null
+		let created: Awaited<ReturnType<(typeof jobRepository)['create']>> | null = null
 		try {
 			created = await jobRepository.create({
 				id: jobId,
 				userId: user.id,
 				inputImageUrl: parsed.data.imageUrl,
+				...(productAnalysisId ? { productAnalysisId } : {}),
+				...(referenceIntake ? { referenceIntake } : {}),
 				status: 'QUEUED',
 			})
 		} catch (error) {
@@ -169,38 +242,41 @@ export function createJobSubRouter(deps: {
 		const queuePayload: MediaGenerateJobData = {
 			...(parsed.data.creativeContext != null
 				? {
-					creativeContext: {
-						...(parsed.data.creativeContext.location
-							? { location: parsed.data.creativeContext.location }
-							: {}),
-						...(parsed.data.creativeContext.profession
-							? { profession: parsed.data.creativeContext.profession }
-							: {}),
-						...(parsed.data.creativeContext.identity
-							? { identity: parsed.data.creativeContext.identity }
-							: {}),
-						...(parsed.data.creativeContext.traits
-							? { traits: parsed.data.creativeContext.traits }
-							: {}),
-						...(parsed.data.creativeContext.visualStyle
-							? { visualStyle: parsed.data.creativeContext.visualStyle }
-							: {}),
-					},
-				}
+						creativeContext: {
+							...(parsed.data.creativeContext.location
+								? { location: parsed.data.creativeContext.location }
+								: {}),
+							...(parsed.data.creativeContext.profession
+								? { profession: parsed.data.creativeContext.profession }
+								: {}),
+							...(parsed.data.creativeContext.identity
+								? { identity: parsed.data.creativeContext.identity }
+								: {}),
+							...(parsed.data.creativeContext.traits
+								? { traits: parsed.data.creativeContext.traits }
+								: {}),
+							...(parsed.data.creativeContext.visualStyle
+								? { visualStyle: parsed.data.creativeContext.visualStyle }
+								: {}),
+						},
+					}
 				: {}),
 			projectId: created.id,
 			userId: user.id,
 			imageUrl: parsed.data.imageUrl,
-			...(parsed.data.referenceBrief != null
+			...(productAnalysisId ? { productAnalysisId } : {}),
+			...(referenceIntake
 				? {
-						referenceBrief: parsed.data.referenceBrief,
-						normalizedReferenceBrief: normalizedReferenceBrief!,
+						referenceBrief: referenceIntake.referenceBrief,
+						normalizedReferenceBrief: referenceIntake.normalizedReferenceBrief,
 					}
 				: {}),
 			...(parsed.data.personaId != null ? { personaId: parsed.data.personaId } : {}),
 			...(idempotencyKey != null ? { idempotencyKey } : {}),
 			retryAttempt: 0,
-			...(parsed.data.productCategory != null ? { productCategory: parsed.data.productCategory } : {}),
+			...(parsed.data.productCategory != null
+				? { productCategory: parsed.data.productCategory }
+				: {}),
 			...(parsed.data.moods != null ? { moods: parsed.data.moods } : {}),
 			...(parsed.data.keywords != null ? { keywords: parsed.data.keywords } : {}),
 			...(parsed.data.agenticMode != null ? { agenticMode: parsed.data.agenticMode } : {}),
@@ -284,9 +360,7 @@ export function createJobSubRouter(deps: {
 		}
 
 		const now = new Date()
-		const windowStart = new Date(
-			now.getTime() - reliabilityPolicy.lookbackHours * 60 * 60 * 1000,
-		)
+		const windowStart = new Date(now.getTime() - reliabilityPolicy.lookbackHours * 60 * 60 * 1000)
 
 		const [row] = await db
 			.select({ succeededCount: count() })
@@ -321,6 +395,49 @@ export function createJobSubRouter(deps: {
 		})
 	})
 
+	app.get('/jobs/:jobId/reference-plan', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const jobId = c.req.param('jobId')
+		const job = await jobRepository.findById(jobId, user.id)
+		if (!job) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'JOB_NOT_FOUND',
+						message: 'Job not found',
+					},
+				},
+				404,
+			)
+		}
+
+		if (!job.referenceIntake?.normalizedReferenceBrief) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'REFERENCE_PLAN_NOT_READY',
+						message: 'Reference intake is required before a reference plan can be built',
+					},
+				},
+				409,
+			)
+		}
+
+		return c.json({
+			success: true,
+			data: buildOfficialReferenceQueryPlan({
+				jobId: job.id,
+				normalizedBrief: job.referenceIntake.normalizedReferenceBrief,
+			}),
+		})
+	})
+
 	app.get('/jobs/:jobId', async (c) => {
 		const user = c.get('user')
 		if (!user) {
@@ -349,8 +466,7 @@ export function createJobSubRouter(deps: {
 			.orderBy(desc(jobEvents.createdAt))
 			.limit(20)
 		const orderedRows = [...rows].sort(
-			(left, right) =>
-				new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+			(left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
 		)
 
 		const events = orderedRows.map<JobStatusEvent>((row) => {
@@ -364,7 +480,8 @@ export function createJobSubRouter(deps: {
 			})
 			return {
 				...event,
-				createdAt: typeof row.createdAt === 'string' ? row.createdAt : new Date(row.createdAt).toISOString(),
+				createdAt:
+					typeof row.createdAt === 'string' ? row.createdAt : new Date(row.createdAt).toISOString(),
 				payload: {
 					...event.payload,
 					canRetry: jobCanRetry(event.payload.newStatus, event.payload.retryCount ?? 0),
@@ -391,6 +508,7 @@ export function createJobSubRouter(deps: {
 				job: toJobStatusResponse(job),
 				events,
 				variants,
+				...(job.referenceIntake ? { referenceIntake: job.referenceIntake } : {}),
 			},
 		})
 	})

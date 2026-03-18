@@ -200,6 +200,7 @@ export const videoJobs = pgTable(
 		status: jobStatusEnum('status').notNull().default('QUEUED'),
 		inputImageUrl: text('input_image_url').notNull(),
 		productAnalysisId: uuid('product_analysis_id'),
+		referenceIntake: jsonb('reference_intake'),
 		modelPersonaSelectionId: uuid('model_persona_selection_id'),
 		progress: integer('progress').notNull().default(0),
 		retryCount: integer('retry_count').notNull().default(0),

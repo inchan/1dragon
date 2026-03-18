@@ -65,6 +65,8 @@ Plans:
 - [ ] 03-02: Normalize rights state, source metadata, and capture evidence
 - [ ] 03-03: Add market-language and trend-signal enrichment
 
+Status note: initial query-planning rules are implemented from persisted intake; the remaining `03-01` gap is live official-source adapter execution against those plans.
+
 ### Phase 4: Extract Patterns And Rank Storylines
 **Goal**: Collected inputs become reusable pattern records and ranked storyline candidates for the operator.
 **Depends on**: Phase 3

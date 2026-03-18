@@ -97,6 +97,7 @@ export interface MediaGenerateJobData {
 	imageUrl: string
 	referenceBrief?: ReferenceBrief
 	normalizedReferenceBrief?: NormalizedReferenceBrief
+	productAnalysisId?: string
 	personaId?: string
 	retryAttempt?: number
 	idempotencyKey?: string

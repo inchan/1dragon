@@ -5,16 +5,16 @@
 See: `.planning/PROJECT.md` (updated 2026-03-18)
 
 **Core value:** Turn one product brief into trustworthy, reference-backed storyline options without copying specific ads.
-**Current focus:** Phase 2 - Build Input And Fact Normalization
+**Current focus:** Phase 3 - Collect Reference Signals Safely
 
 ## Current Position
 
-Phase: 2 of 6 (Build Input And Fact Normalization)
-Plan: 1 of 3 in current phase
+Phase: 3 of 6 (Collect Reference Signals Safely)
+Plan: 0 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-18 - Added best-effort landing-page truth extraction for URL-only reference briefs and recorded the next OpenSpec slice for Phase 2 `02-02`.
+Last activity: 2026-03-19 - Started Phase 3 by adding official-source reference query planning and a job-scoped `reference-plan` response derived from persisted intake.
 
-Progress: [██░░░░░░░░] 20%
+Progress: [██████░░░░] 45%
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | 2 | - |
-| 2 | 1 | 1 | - |
+| 2 | 3 | 3 | - |
 
 **Recent Trend:**
 - Last 5 plans: none yet
@@ -46,9 +46,9 @@ Progress: [██░░░░░░░░] 20%
 
 ### Pending Todos
 
-- Finish the remaining Phase 2 `02-02` gap by wiring product/image analysis into a stable category and usage taxonomy.
 - Decide which active OpenSpec changes are paused, adapted, or archived under the new upstream contract.
-- Add persistence/debug traces for normalized intake records in Phase 2 plan 02-03.
+- Add the first official-source collection adapters behind the new query-plan contract.
+- Decide whether reference-intake debug output should later split operator-facing evidence from internal diagnostics.
 
 ### Blockers/Concerns
 
@@ -63,6 +63,6 @@ Progress: [██░░░░░░░░] 20%
 
 ## Session Continuity
 
-Last session: 2026-03-18 01:00 KST
-Stopped at: Landing-page truth extraction added; next step is taxonomy enrichment plus normalized-intake persistence
+Last session: 2026-03-19 00:47 KST
+Stopped at: Phase 2 completed; next step is Phase 3 official-source collection and rights metadata normalization
 Resume file: None

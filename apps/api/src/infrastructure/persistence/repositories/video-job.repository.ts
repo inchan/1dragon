@@ -1,19 +1,28 @@
-import { and, count, desc, eq } from 'drizzle-orm'
-import { Platform } from '@1dragon/shared'
 import type {
 	VideoJobCreateInput,
+	VideoJobHistoryQuery,
 	VideoJobRecord,
 	VideoJobRepository,
 	VideoVariantCreateInput,
 	VideoVariantRecord,
 	VideoVariantRepository,
-	VideoJobHistoryQuery,
 } from '@/domain/media/ports.js'
+import { logger } from '@/infrastructure/logging/logger.js'
+import { Platform, type ReferenceIntake, referenceIntakeSchema } from '@1dragon/shared'
+import { and, count, desc, eq } from 'drizzle-orm'
 import { db } from '../db.js'
 import { videoJobs, videoVariants } from '../schema.js'
-import { logger } from '@/infrastructure/logging/logger.js'
 
 const VALID_PLATFORMS = new Set<string>(Object.values(Platform))
+
+function parseReferenceIntake(value: unknown): ReferenceIntake | null {
+	if (value === null || value === undefined || typeof value !== 'object' || Array.isArray(value)) {
+		return null
+	}
+
+	const parsed = referenceIntakeSchema.safeParse(value)
+	return parsed.success ? parsed.data : null
+}
 
 function mapVideoJob(row: typeof videoJobs.$inferSelect): VideoJobRecord {
 	return {
@@ -22,6 +31,7 @@ function mapVideoJob(row: typeof videoJobs.$inferSelect): VideoJobRecord {
 		status: row.status,
 		inputImageUrl: row.inputImageUrl,
 		productAnalysisId: row.productAnalysisId,
+		referenceIntake: parseReferenceIntake(row.referenceIntake),
 		modelPersonaSelectionId: row.modelPersonaSelectionId,
 		progress: row.progress,
 		retryCount: row.retryCount ?? 0,
@@ -68,8 +78,9 @@ export class VideoJobRepositoryImpl implements VideoJobRepository {
 				userId: input.userId,
 				inputImageUrl: input.inputImageUrl,
 				productAnalysisId: input.productAnalysisId ?? null,
+				referenceIntake: input.referenceIntake ?? null,
 				modelPersonaSelectionId: input.modelPersonaSelectionId ?? null,
-				status: (input.status ?? 'QUEUED') as typeof videoJobs.$inferInsert['status'],
+				status: (input.status ?? 'QUEUED') as (typeof videoJobs.$inferInsert)['status'],
 				retryCount: input.retryCount ?? 0,
 			})
 			.returning()
@@ -100,7 +111,7 @@ export class VideoJobRepositoryImpl implements VideoJobRepository {
 		readonly completedAt?: Date
 	}): Promise<VideoJobRecord | null> {
 		const updates: Partial<typeof videoJobs.$inferInsert> = {
-			status: input.status as typeof videoJobs.$inferInsert['status'],
+			status: input.status as (typeof videoJobs.$inferInsert)['status'],
 			updatedAt: new Date(),
 		}
 

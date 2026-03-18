@@ -1,10 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Hono } from 'hono'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
 	mockAddJob,
 	mockAppendJobStatusEvent,
 	mockLoggerError,
+	mockProductAnalysisFindById,
 	mockSelect,
 	mockSubscriptionFindFirst,
 	mockJobEventRows,
@@ -12,6 +13,7 @@ const {
 	mockAddJob: vi.fn(),
 	mockAppendJobStatusEvent: vi.fn(),
 	mockLoggerError: vi.fn(),
+	mockProductAnalysisFindById: vi.fn(),
 	mockSelect: vi.fn(),
 	mockSubscriptionFindFirst: vi.fn(),
 	mockJobEventRows: vi.fn(),
@@ -71,6 +73,12 @@ vi.mock('@/infrastructure/logging/index.js', () => ({
 	},
 }))
 
+vi.mock('@/infrastructure/persistence/repositories/product-analysis.repository.js', () => ({
+	ProductAnalysisRepositoryImpl: class {
+		findById = mockProductAnalysisFindById
+	},
+}))
+
 import { buildDeterministicJobId } from './helpers.js'
 import { createJobSubRouter } from './job-routes.js'
 
@@ -120,6 +128,7 @@ describe('createJobSubRouter', () => {
 		vi.clearAllMocks()
 		mockAddJob.mockResolvedValue(undefined)
 		mockAppendJobStatusEvent.mockResolvedValue(undefined)
+		mockProductAnalysisFindById.mockResolvedValue(null)
 		mockSubscriptionFindFirst.mockResolvedValue(null)
 		mockJobEventRows.mockReturnValue([])
 		mockSelect.mockImplementation((shape?: Record<string, unknown>) => {
@@ -306,10 +315,126 @@ describe('createJobSubRouter', () => {
 				normalizedReferenceBrief: expect.objectContaining({
 					productName: 'Cloud Wrap Dress',
 					coreBenefits: ['Waist definition'],
-					platformTargets: ['TIKTOK'],
+					platformTargets: ['TIKTOK' as const],
 					queryHints: expect.objectContaining({
 						productFacts: expect.arrayContaining(['Cloud Wrap Dress', 'apparel / dresses']),
 						competitorQueries: ['TikTok fashion ads'],
+					}),
+				}),
+			}),
+			{ jobId: createdJob.id },
+		)
+	})
+
+	it('persists enriched reference intake when a valid product analysis is supplied', async () => {
+		mockProductAnalysisFindById.mockResolvedValueOnce({
+			id: '11111111-1111-4111-8111-111111111111',
+			userId: 'user_1',
+			imageUrl: 'https://cdn.example.com/product.png',
+			category: 'ACCESSORIES',
+			keywords: ['crossbody', 'minimal carry'],
+			mood: null,
+			colors: [],
+			targetAudience: 'minimalist commuters',
+			suggestedStyles: [],
+			confidenceScore: 0.88,
+			isProductImage: true,
+			createdAt: NOW,
+			updatedAt: NOW,
+			resolution: { width: 1080, height: 1350 },
+			hasTransparentBg: false,
+			enhancedImageUrl: null,
+			backgroundRemovedImageUrl: null,
+		})
+		const createdJob = {
+			id: buildDeterministicJobId(
+				'user_1',
+				'reference-intake-analysis-1',
+				'https://cdn.example.com/product.png',
+			),
+			userId: 'user_1',
+			status: 'QUEUED',
+			progress: 0,
+			retryCount: 0,
+			errorMessage: null,
+			inputImageUrl: 'https://cdn.example.com/product.png',
+			productAnalysisId: '11111111-1111-4111-8111-111111111111',
+			referenceIntake: null,
+			modelPersonaSelectionId: null,
+			startedAt: null,
+			completedAt: null,
+			createdAt: NOW,
+			updatedAt: NOW,
+		}
+		const jobRepository = {
+			findById: vi.fn().mockResolvedValue(null),
+			create: vi.fn().mockResolvedValue(createdJob),
+			updateStatus: vi.fn().mockResolvedValue(createdJob),
+		}
+		const app = buildApp({
+			jobRepository: jobRepository as never,
+			variantRepository: {
+				findByJobId: vi.fn().mockResolvedValue([]),
+			} as never,
+		})
+
+		const response = await app.fetch(
+			new Request('http://localhost/jobs', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Idempotency-Key': 'reference-intake-analysis-1',
+				},
+				body: JSON.stringify({
+					imageUrl: 'https://cdn.example.com/product.png',
+					stylePreset: 'TRENDY',
+					platforms: ['TIKTOK'],
+					productAnalysisId: '11111111-1111-4111-8111-111111111111',
+					referenceBrief: {
+						productName: 'Metro Sling Bag',
+						productCategoryHint: 'accessories',
+						coreBenefits: ['hands-free commute'],
+						targetAudience: {
+							summary: 'city commuters',
+							useCases: ['commute'],
+							painPoints: [],
+						},
+						landingPageText:
+							'A slim sling bag built for urban commutes and quick access essentials.',
+						differentiators: ['water-resistant finish'],
+						categoryExamples: ['everyday carry'],
+					},
+				}),
+			}),
+		)
+
+		expect(response.status).toBe(201)
+		expect(jobRepository.create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				productAnalysisId: '11111111-1111-4111-8111-111111111111',
+				referenceIntake: expect.objectContaining({
+					productAnalysisId: '11111111-1111-4111-8111-111111111111',
+					productAnalysis: expect.objectContaining({
+						id: '11111111-1111-4111-8111-111111111111',
+						category: 'ACCESSORIES',
+						keywords: ['crossbody', 'minimal carry'],
+						targetAudience: 'minimalist commuters',
+					}),
+					taxonomy: expect.objectContaining({
+						category: 'ACCESSORIES',
+						source: 'merged',
+					}),
+				}),
+			}),
+		)
+		expect(mockAddJob).toHaveBeenCalledWith(
+			'media-generate',
+			expect.objectContaining({
+				productAnalysisId: '11111111-1111-4111-8111-111111111111',
+				normalizedReferenceBrief: expect.objectContaining({
+					taxonomy: expect.objectContaining({
+						category: 'ACCESSORIES',
+						source: 'merged',
 					}),
 				}),
 			}),
@@ -481,6 +606,57 @@ describe('createJobSubRouter', () => {
 		expect(payload.normalizedReferenceBrief?.missingSignals).not.toContain('landing_page_text')
 	})
 
+	it('rejects an unknown product analysis id before enqueue', async () => {
+		mockProductAnalysisFindById.mockResolvedValueOnce(null)
+
+		const app = buildApp({
+			jobRepository: {
+				findById: vi.fn(),
+				create: vi.fn(),
+				updateStatus: vi.fn(),
+			} as never,
+			variantRepository: {
+				findByJobId: vi.fn().mockResolvedValue([]),
+			} as never,
+		})
+
+		const response = await app.fetch(
+			new Request('http://localhost/jobs', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					imageUrl: 'https://cdn.example.com/product.png',
+					stylePreset: 'TRENDY',
+					platforms: ['TIKTOK'],
+					productAnalysisId: '11111111-1111-4111-8111-111111111111',
+				}),
+			}),
+		)
+		const body = (await response.json()) as {
+			success: boolean
+			error: {
+				code: string
+				details?: {
+					fieldErrors?: Array<{ field: string; message: string }>
+				}
+			}
+		}
+
+		expect(response.status).toBe(400)
+		expect(body.success).toBe(false)
+		expect(body.error.code).toBe('VALIDATION')
+		expect(body.error.details?.fieldErrors).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					field: 'productAnalysisId',
+				}),
+			]),
+		)
+		expect(mockAddJob).not.toHaveBeenCalled()
+	})
+
 	it('falls back safely when landing-page fetch fails', async () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')))
 
@@ -562,6 +738,70 @@ describe('createJobSubRouter', () => {
 	})
 
 	it('returns canonical job detail with ascending events and parsed variants', async () => {
+		const persistedReferenceIntake = {
+			referenceBrief: {
+				productName: 'Metro Sling Bag',
+				productCategoryHint: 'accessories',
+				coreBenefits: ['hands-free commute'],
+				targetAudience: {
+					summary: 'city commuters',
+					useCases: ['commute'],
+					painPoints: [],
+				},
+				landingPageText: 'A slim sling bag built for urban commutes and quick access essentials.',
+				differentiators: ['water-resistant finish'],
+				proofPoints: [],
+				competitorExamples: [],
+				categoryExamples: ['everyday carry'],
+				successMetrics: [],
+			},
+			normalizedReferenceBrief: {
+				productName: 'Metro Sling Bag',
+				coreBenefits: ['hands-free commute'],
+				differentiators: ['water-resistant finish'],
+				proofPoints: [],
+				targetAudienceSummary: 'city commuters',
+				useCases: ['commute'],
+				painPoints: [],
+				landingPageExcerpt:
+					'A slim sling bag built for urban commutes and quick access essentials.',
+				landingPageSource: 'provided_text',
+				competitorExamples: [],
+				categoryExamples: ['everyday carry'],
+				successMetrics: [],
+				platformTargets: ['TIKTOK'],
+				queryHints: {
+					productFacts: [
+						'Metro Sling Bag',
+						'accessories',
+						'hands-free commute',
+						'water-resistant finish',
+					],
+					marketLanguage: ['city commuters', 'commute', 'hands-free commute'],
+					proofQueries: ['hands-free commute', 'water-resistant finish'],
+					competitorQueries: ['everyday carry'],
+				},
+				taxonomy: {
+					category: 'ACCESSORIES',
+					source: 'merged',
+					usageContexts: ['COMMUTE', 'ON_BODY'],
+				},
+				missingSignals: ['price_band', 'proof_points', 'reference_examples', 'success_metrics'],
+				completenessScore: 40,
+			},
+			taxonomy: {
+				category: 'ACCESSORIES',
+				source: 'merged',
+				usageContexts: ['COMMUTE', 'ON_BODY'],
+			},
+			productAnalysisId: '11111111-1111-4111-8111-111111111111',
+			productAnalysis: {
+				id: '11111111-1111-4111-8111-111111111111',
+				category: 'ACCESSORIES',
+				keywords: ['crossbody', 'minimal carry'],
+				targetAudience: 'minimalist commuters',
+			},
+		}
 		const jobRecord = {
 			id: '22222222-2222-4222-8222-222222222222',
 			userId: 'user_1',
@@ -570,7 +810,8 @@ describe('createJobSubRouter', () => {
 			retryCount: 0,
 			errorMessage: null,
 			inputImageUrl: 'https://cdn.example.com/product.png',
-			productAnalysisId: null,
+			productAnalysisId: '11111111-1111-4111-8111-111111111111',
+			referenceIntake: persistedReferenceIntake,
 			modelPersonaSelectionId: null,
 			startedAt: NOW,
 			completedAt: ONE_MINUTE_LATER,
@@ -633,6 +874,12 @@ describe('createJobSubRouter', () => {
 					status: string
 					progress: number
 				}
+				referenceIntake?: {
+					productAnalysisId?: string
+					taxonomy?: {
+						category: string
+					}
+				}
 				events: Array<{
 					payload: {
 						newStatus: string
@@ -659,9 +906,15 @@ describe('createJobSubRouter', () => {
 			status: 'SUCCEEDED',
 			progress: 100,
 		})
+		expect(body.data.referenceIntake?.productAnalysisId).toBe(
+			'11111111-1111-4111-8111-111111111111',
+		)
+		expect(body.data.referenceIntake?.taxonomy).toMatchObject({
+			category: 'ACCESSORIES',
+		})
 		expect(body.data.events).toHaveLength(2)
-		expect(body.data.events[0]!.payload.newStatus).toBe('ANALYZING')
-		expect(body.data.events[1]!.payload.newStatus).toBe('SUCCEEDED')
+		expect(body.data.events[0]?.payload.newStatus).toBe('ANALYZING')
+		expect(body.data.events[1]?.payload.newStatus).toBe('SUCCEEDED')
 		expect(body.data.variants).toEqual([
 			expect.objectContaining({
 				id: '33333333-3333-4333-8333-333333333333',
@@ -672,6 +925,157 @@ describe('createJobSubRouter', () => {
 				resolution: { width: 1080, height: 1920 },
 			}),
 		])
+	})
+
+	it('returns an official-source reference plan from persisted intake', async () => {
+		const jobRecord = {
+			id: '22222222-2222-4222-8222-222222222222',
+			userId: 'user_1',
+			status: 'SUCCEEDED',
+			progress: 100,
+			retryCount: 0,
+			errorMessage: null,
+			inputImageUrl: 'https://cdn.example.com/product.png',
+			productAnalysisId: '11111111-1111-4111-8111-111111111111',
+			referenceIntake: {
+				referenceBrief: {
+					productName: 'Metro Sling Bag',
+					productCategoryHint: 'accessories',
+					coreBenefits: ['hands-free commute'],
+					targetAudience: {
+						summary: 'city commuters',
+						useCases: ['commute'],
+						painPoints: [],
+					},
+					landingPageText: 'A slim sling bag built for urban commutes and quick access essentials.',
+					differentiators: ['water-resistant finish'],
+					proofPoints: [],
+					competitorExamples: [],
+					categoryExamples: ['everyday carry'],
+					successMetrics: [],
+				},
+				normalizedReferenceBrief: {
+					productName: 'Metro Sling Bag',
+					productCategoryHint: 'accessories',
+					productAnalysisId: '11111111-1111-4111-8111-111111111111',
+					coreBenefits: ['hands-free commute'],
+					differentiators: ['water-resistant finish'],
+					proofPoints: [],
+					targetAudienceSummary: 'city commuters',
+					useCases: ['commute'],
+					painPoints: [],
+					landingPageExcerpt: 'A slim sling bag built for urban commutes and quick access essentials.',
+					landingPageSource: 'provided_text',
+					competitorExamples: [],
+					categoryExamples: ['everyday carry'],
+					successMetrics: [],
+					platformTargets: ['TIKTOK', 'INSTAGRAM_REELS'],
+					queryHints: {
+						productFacts: ['Metro Sling Bag', 'accessories', 'hands-free commute'],
+						marketLanguage: ['city commuters', 'commute'],
+						proofQueries: ['hands-free commute'],
+						competitorQueries: ['everyday carry'],
+					},
+					taxonomy: {
+						category: 'ACCESSORIES',
+						source: 'merged',
+						usageContexts: ['COMMUTE', 'ON_BODY'],
+					},
+					missingSignals: ['price_band', 'proof_points', 'reference_examples', 'success_metrics'],
+					completenessScore: 40,
+				},
+				taxonomy: {
+					category: 'ACCESSORIES',
+					source: 'merged',
+					usageContexts: ['COMMUTE', 'ON_BODY'],
+				},
+				productAnalysisId: '11111111-1111-4111-8111-111111111111',
+			},
+			modelPersonaSelectionId: null,
+			startedAt: NOW,
+			completedAt: ONE_MINUTE_LATER,
+			createdAt: NOW,
+			updatedAt: ONE_MINUTE_LATER,
+		}
+		const app = buildApp({
+			jobRepository: {
+				findById: vi.fn().mockResolvedValue(jobRecord),
+				create: vi.fn(),
+				updateStatus: vi.fn(),
+			} as never,
+			variantRepository: {
+				findByJobId: vi.fn().mockResolvedValue([]),
+			} as never,
+		})
+
+		const response = await app.fetch(
+			new Request(`http://localhost/jobs/${jobRecord.id}/reference-plan`),
+		)
+		const body = (await response.json()) as {
+			data: {
+				jobId: string
+				taxonomy: {
+					category: string
+				}
+				items: Array<{
+					lane: string
+					source: string
+				}>
+			}
+		}
+
+		expect(response.status).toBe(200)
+		expect(body.data.jobId).toBe(jobRecord.id)
+		expect(body.data.taxonomy.category).toBe('ACCESSORIES')
+		expect(body.data.items).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					lane: 'OFFICIAL_SNS_STRUCTURE',
+					source: 'TIKTOK_CREATIVE_CENTER',
+				}),
+				expect.objectContaining({
+					lane: 'OFFICIAL_SNS_STRUCTURE',
+					source: 'META_AD_LIBRARY',
+				}),
+				expect.objectContaining({
+					lane: 'OFFICIAL_PLATFORM_PROMPT',
+				}),
+			]),
+		)
+	})
+
+	it('returns 409 when a reference plan is requested before intake exists', async () => {
+		const app = buildApp({
+			jobRepository: {
+				findById: vi.fn().mockResolvedValue({
+					id: '22222222-2222-4222-8222-222222222222',
+					userId: 'user_1',
+					status: 'QUEUED',
+					progress: 0,
+					retryCount: 0,
+					errorMessage: null,
+					inputImageUrl: 'https://cdn.example.com/product.png',
+					productAnalysisId: null,
+					referenceIntake: null,
+					modelPersonaSelectionId: null,
+					startedAt: null,
+					completedAt: null,
+					createdAt: NOW,
+					updatedAt: NOW,
+				}),
+				create: vi.fn(),
+				updateStatus: vi.fn(),
+			} as never,
+			variantRepository: {
+				findByJobId: vi.fn().mockResolvedValue([]),
+			} as never,
+		})
+
+		const response = await app.fetch(
+			new Request('http://localhost/jobs/22222222-2222-4222-8222-222222222222/reference-plan'),
+		)
+
+		expect(response.status).toBe(409)
 	})
 
 	it('marks the job failed and returns 503 when enqueue fails', async () => {

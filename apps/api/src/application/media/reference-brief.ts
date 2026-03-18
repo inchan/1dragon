@@ -1,16 +1,53 @@
 import {
-	normalizedReferenceBriefSchema,
 	type NormalizedReferenceBrief,
 	type Platform,
+	ProductCategory,
+	type ProductCategory as ProductCategoryType,
 	type ReferenceBrief,
+	type ReferenceBriefTaxonomy,
+	type ReferenceTaxonomyUsageContext,
+	normalizedReferenceBriefSchema,
 } from '@1dragon/shared'
 import type { ResolvedLandingPageTruth } from './landing-page-truth.js'
+
+type ReferenceBriefProductAnalysisSignal = {
+	readonly id: string
+	readonly category?: ProductCategoryType | null
+	readonly keywords?: ReadonlyArray<string>
+	readonly targetAudience?: string | null
+}
 
 type NormalizeReferenceBriefInput = {
 	readonly brief: ReferenceBrief
 	readonly fallbackPlatforms?: ReadonlyArray<Platform>
 	readonly resolvedLandingPage?: ResolvedLandingPageTruth
+	readonly productAnalysis?: ReferenceBriefProductAnalysisSignal
 }
+
+const PRODUCT_CATEGORY_HINTS: ReadonlyArray<{
+	readonly category: ProductCategoryType
+	readonly hints: ReadonlyArray<string>
+}> = [
+	{ category: ProductCategory.FASHION, hints: ['fashion', 'apparel', 'dress', 'wear', 'clothing'] },
+	{
+		category: ProductCategory.BEAUTY,
+		hints: ['beauty', 'cosmetic', 'skincare', 'makeup', 'haircare'],
+	},
+	{ category: ProductCategory.FOOD, hints: ['food', 'snack', 'beverage', 'drink', 'meal'] },
+	{
+		category: ProductCategory.ELECTRONICS,
+		hints: ['electronics', 'device', 'gadget', 'tech', 'audio'],
+	},
+	{ category: ProductCategory.HOME, hints: ['home', 'kitchen', 'living', 'furniture', 'decor'] },
+	{
+		category: ProductCategory.ACCESSORIES,
+		hints: ['accessory', 'accessories', 'bag', 'wallet', 'watch', 'jewelry'],
+	},
+	{
+		category: ProductCategory.SPORTS,
+		hints: ['sports', 'fitness', 'athletic', 'outdoor', 'training'],
+	},
+]
 
 function normalizeText(value: string | undefined): string | undefined {
 	const trimmed = value?.trim()
@@ -41,6 +78,37 @@ function normalizeList(values: ReadonlyArray<string>): string[] {
 
 function normalizePlatforms(values: ReadonlyArray<Platform>): Platform[] {
 	return [...new Set(values)]
+}
+
+function normalizeUsageContexts(
+	values: ReadonlyArray<ReferenceTaxonomyUsageContext>,
+): ReferenceTaxonomyUsageContext[] {
+	return [...new Set(values)]
+}
+
+function resolveProductCategoryHint(value: string | undefined): ProductCategoryType | undefined {
+	const normalized = normalizeText(value)?.toUpperCase()
+	if (!normalized) {
+		return undefined
+	}
+
+	const enumMatch = Object.values(ProductCategory).find((category) => category === normalized)
+	if (enumMatch) {
+		return enumMatch
+	}
+
+	const lowered = normalized.toLowerCase()
+	for (const candidate of PRODUCT_CATEGORY_HINTS) {
+		if (candidate.hints.some((hint) => lowered.includes(hint))) {
+			return candidate.category
+		}
+	}
+
+	return undefined
+}
+
+function includesAny(value: string, candidates: ReadonlyArray<string>): boolean {
+	return candidates.some((candidate) => value.includes(candidate))
 }
 
 function buildLandingPageExcerpt(value: string | undefined): string | undefined {
@@ -88,7 +156,11 @@ function buildQueryHints(input: {
 			...input.painPoints,
 			...input.coreBenefits,
 		]),
-		proofQueries: normalizeList([...input.coreBenefits, ...input.differentiators, ...input.proofPoints]),
+		proofQueries: normalizeList([
+			...input.coreBenefits,
+			...input.differentiators,
+			...input.proofPoints,
+		]),
 		competitorQueries: normalizeList([...input.competitorExamples, ...input.categoryExamples]),
 	}
 }
@@ -151,7 +223,106 @@ function calculateCompletenessScore(input: {
 	return Math.max(0, Math.min(100, score))
 }
 
+function buildTaxonomy(input: {
+	readonly productCategoryHint: string | undefined
+	readonly useCases: ReadonlyArray<string>
+	readonly categoryExamples: ReadonlyArray<string>
+	readonly audienceSummary: string
+	readonly productAnalysis?: ReferenceBriefProductAnalysisSignal
+}): ReferenceBriefTaxonomy {
+	const briefCategory = resolveProductCategoryHint(input.productCategoryHint)
+	const analysisCategory = input.productAnalysis?.category ?? undefined
+	const category = analysisCategory ?? briefCategory ?? ProductCategory.OTHER
+
+	let source: ReferenceBriefTaxonomy['source']
+	if (analysisCategory && briefCategory) {
+		source = 'merged'
+	} else if (analysisCategory) {
+		source = 'product_analysis'
+	} else {
+		source = 'brief'
+	}
+
+	const contextCorpus = normalizeList([
+		input.audienceSummary,
+		...input.useCases,
+		...input.categoryExamples,
+		...(input.productAnalysis?.keywords ?? []),
+		...(input.productAnalysis?.targetAudience ? [input.productAnalysis.targetAudience] : []),
+	])
+		.join(' ')
+		.toLowerCase()
+
+	const usageContexts: ReferenceTaxonomyUsageContext[] = []
+
+	if (includesAny(contextCorpus, ['wear', 'outfit', 'fit', 'fabric', 'dress', 'bag', 'jewelry'])) {
+		usageContexts.push('ON_BODY')
+	}
+	if (includesAny(contextCorpus, ['detail', 'texture', 'stitch', 'close', 'material'])) {
+		usageContexts.push('DETAIL_CLOSEUP')
+	}
+	if (includesAny(contextCorpus, ['demo', 'show', 'how to', 'hand'])) {
+		usageContexts.push('HANDS_ON_DEMO')
+	}
+	if (includesAny(contextCorpus, ['commute', 'office', 'workday', 'daily'])) {
+		usageContexts.push('COMMUTE')
+	}
+	if (includesAny(contextCorpus, ['home', 'room', 'living', 'kitchen'])) {
+		usageContexts.push('ROOM_CONTEXT')
+	}
+	if (includesAny(contextCorpus, ['desk', 'setup', 'workspace'])) {
+		usageContexts.push('DESK_SETUP')
+	}
+	if (includesAny(contextCorpus, ['beauty', 'skincare', 'makeup', 'routine', 'face'])) {
+		usageContexts.push('BEAUTY_ROUTINE')
+	}
+	if (includesAny(contextCorpus, ['workout', 'fitness', 'gym', 'training', 'sport'])) {
+		usageContexts.push('WORKOUT')
+	}
+	if (includesAny(contextCorpus, ['meal', 'snack', 'drink', 'bite', 'sip', 'food'])) {
+		usageContexts.push('MEALTIME')
+	}
+	if (includesAny(contextCorpus, ['before', 'after', 'transformation', 'comparison'])) {
+		usageContexts.push('BEFORE_AFTER')
+	}
+
+	const normalizedUsageContexts = normalizeUsageContexts(usageContexts)
+	if (normalizedUsageContexts.length === 0) {
+		switch (category) {
+			case ProductCategory.FASHION:
+			case ProductCategory.ACCESSORIES:
+				normalizedUsageContexts.push('ON_BODY')
+				break
+			case ProductCategory.BEAUTY:
+				normalizedUsageContexts.push('BEAUTY_ROUTINE')
+				break
+			case ProductCategory.HOME:
+				normalizedUsageContexts.push('ROOM_CONTEXT')
+				break
+			case ProductCategory.FOOD:
+				normalizedUsageContexts.push('MEALTIME')
+				break
+			case ProductCategory.SPORTS:
+				normalizedUsageContexts.push('WORKOUT')
+				break
+			case ProductCategory.ELECTRONICS:
+				normalizedUsageContexts.push('HANDS_ON_DEMO')
+				break
+			default:
+				normalizedUsageContexts.push('DETAIL_CLOSEUP')
+				break
+		}
+	}
+
+	return {
+		category,
+		source,
+		usageContexts: normalizedUsageContexts.slice(0, 5),
+	}
+}
+
 export type { NormalizeReferenceBriefInput }
+export type { ReferenceBriefProductAnalysisSignal }
 
 export function normalizeReferenceBriefInput(
 	input: NormalizeReferenceBriefInput,
@@ -204,6 +375,13 @@ export function normalizeReferenceBriefInput(
 		competitorExamples,
 		categoryExamples,
 	})
+	const taxonomy = buildTaxonomy({
+		productCategoryHint,
+		useCases,
+		categoryExamples,
+		audienceSummary,
+		...(input.productAnalysis ? { productAnalysis: input.productAnalysis } : {}),
+	})
 
 	const missingSignals = buildMissingSignals({
 		priceBand,
@@ -217,6 +395,7 @@ export function normalizeReferenceBriefInput(
 	return normalizedReferenceBriefSchema.parse({
 		productName,
 		...(productCategoryHint ? { productCategoryHint } : {}),
+		...(input.productAnalysis ? { productAnalysisId: input.productAnalysis.id } : {}),
 		...(priceBand ? { priceBand } : {}),
 		coreBenefits,
 		differentiators,
@@ -234,6 +413,7 @@ export function normalizeReferenceBriefInput(
 		successMetrics,
 		platformTargets,
 		queryHints,
+		taxonomy,
 		missingSignals,
 		completenessScore: calculateCompletenessScore({
 			priceBand,

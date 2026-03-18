@@ -4,14 +4,15 @@
  */
 
 import { z } from 'zod'
+import { agenticExecutionPlanSchema, agenticModeSchema } from '../agentic'
 import {
 	jobStatusSchema,
 	platformSchema,
+	productCategorySchema,
 	storyConceptFamilySchema,
 	stylePresetSchema,
 	subtitleStyleSchema,
 } from '../enums'
-import { agenticExecutionPlanSchema, agenticModeSchema } from '../agentic'
 
 export const referenceBriefTargetAudienceSchema = z.object({
 	summary: z.string().trim().min(1).max(160),
@@ -32,6 +33,32 @@ export const referenceBriefQueryHintsSchema = z.object({
 })
 
 export const landingPageSourceSchema = z.enum(['provided_text', 'fetched_url', 'url_only'])
+export const referenceTaxonomyUsageContextSchema = z.enum([
+	'ON_BODY',
+	'HANDS_ON_DEMO',
+	'DETAIL_CLOSEUP',
+	'COMMUTE',
+	'ROOM_CONTEXT',
+	'DESK_SETUP',
+	'BEAUTY_ROUTINE',
+	'WORKOUT',
+	'MEALTIME',
+	'BEFORE_AFTER',
+])
+export const referenceBriefTaxonomySourceSchema = z.enum(['brief', 'product_analysis', 'merged'])
+
+export const referenceBriefTaxonomySchema = z.object({
+	category: productCategorySchema,
+	source: referenceBriefTaxonomySourceSchema,
+	usageContexts: z.array(referenceTaxonomyUsageContextSchema).min(1).max(5),
+})
+
+export const referenceIntakeProductAnalysisSchema = z.object({
+	id: z.string().uuid(),
+	category: productCategorySchema.nullable().optional(),
+	keywords: z.array(z.string().trim().min(1).max(120)).default([]),
+	targetAudience: z.string().trim().min(1).max(160).optional(),
+})
 
 export const referenceBriefSchema = z
 	.object({
@@ -62,6 +89,7 @@ export const referenceBriefSchema = z
 export const normalizedReferenceBriefSchema = z.object({
 	productName: z.string().trim().min(1).max(160),
 	productCategoryHint: z.string().trim().min(1).max(120).optional(),
+	productAnalysisId: z.string().uuid().optional(),
 	priceBand: z.string().trim().min(1).max(80).optional(),
 	coreBenefits: z.array(z.string().trim().min(1).max(160)).default([]),
 	differentiators: z.array(z.string().trim().min(1).max(160)).default([]),
@@ -79,8 +107,63 @@ export const normalizedReferenceBriefSchema = z.object({
 	successMetrics: z.array(referenceBriefSuccessMetricSchema).default([]),
 	platformTargets: platformSchema.array().min(1).max(3),
 	queryHints: referenceBriefQueryHintsSchema,
+	taxonomy: referenceBriefTaxonomySchema,
 	missingSignals: z.array(z.string().trim().min(1).max(80)).default([]),
 	completenessScore: z.number().min(0).max(100),
+})
+
+export const referenceIntakeSchema = z.object({
+	referenceBrief: referenceBriefSchema,
+	normalizedReferenceBrief: normalizedReferenceBriefSchema,
+	taxonomy: referenceBriefTaxonomySchema.optional(),
+	productAnalysisId: z.string().uuid().optional(),
+	productAnalysis: referenceIntakeProductAnalysisSchema.optional(),
+})
+
+export const officialReferenceLaneSchema = z.enum([
+	'OFFICIAL_SNS_STRUCTURE',
+	'OFFICIAL_PLATFORM_PROMPT',
+	'SIGNAL_MINING',
+])
+
+export const officialReferenceSourceSchema = z.enum([
+	'TIKTOK_CREATIVE_CENTER',
+	'META_AD_LIBRARY',
+	'YOUTUBE_SHORTS_GUIDANCE',
+	'RUNWAY_PROMPT_GUIDE',
+	'SORA_PROMPT_GUIDE',
+	'VEO_PROMPT_GUIDE',
+	'GOOGLE_TRENDS',
+])
+
+export const officialReferenceRightsSchema = z.enum([
+	'STRUCTURE_ONLY',
+	'DOC_LIBRARY_USAGE',
+	'DERIVED_METADATA_ONLY',
+])
+
+export const officialReferenceQueryIntentSchema = z.enum([
+	'category',
+	'proof',
+	'market_language',
+	'prompt_recipe',
+])
+
+export const officialReferenceQueryPlanItemSchema = z.object({
+	lane: officialReferenceLaneSchema,
+	source: officialReferenceSourceSchema,
+	intent: officialReferenceQueryIntentSchema,
+	query: z.string().trim().min(1).max(200),
+	platformTarget: platformSchema.optional(),
+	rights: officialReferenceRightsSchema,
+	freshness: z.enum(['weekly', 'monthly']).default('weekly'),
+	rationale: z.string().trim().min(1).max(240),
+})
+
+export const officialReferenceQueryPlanSchema = z.object({
+	jobId: z.string().uuid(),
+	taxonomy: referenceBriefTaxonomySchema,
+	items: z.array(officialReferenceQueryPlanItemSchema).min(1).max(12),
 })
 
 // ── Request Schemas ──────────────────────────────────────────────────────────
@@ -121,6 +204,7 @@ export const createVideoJobRequestSchema = z.object({
 	recentConceptFamilies: z.array(storyConceptFamilySchema).max(5).optional(),
 	requestedConceptFamily: storyConceptFamilySchema.optional(),
 	referenceBrief: referenceBriefSchema.optional(),
+	productAnalysisId: z.string().uuid().optional(),
 })
 
 export const retryVideoJobRequestSchema = z.object({
@@ -172,6 +256,7 @@ export const videoVariantResponseSchema = z.object({
 })
 
 export const videoJobDetailResponseSchema = videoJobResponseSchema.extend({
+	referenceIntake: referenceIntakeSchema.optional(),
 	variants: videoVariantResponseSchema.array(),
 })
 
@@ -188,6 +273,7 @@ export const mediaJobStatusResponseSchema = z.object({
 	job: videoJobResponseSchema,
 	events: videoJobEventSchema.array().default([]),
 	variants: videoVariantResponseSchema.array().default([]),
+	referenceIntake: referenceIntakeSchema.optional(),
 })
 
 // ── Type Exports ─────────────────────────────────────────────────────────────
@@ -198,6 +284,12 @@ export type RetryVideoJobRequest = z.infer<typeof retryVideoJobRequestSchema>
 export type StoryConceptFamily = z.infer<typeof storyConceptFamilySchema>
 export type ReferenceBrief = z.infer<typeof referenceBriefSchema>
 export type NormalizedReferenceBrief = z.infer<typeof normalizedReferenceBriefSchema>
+export type ReferenceBriefTaxonomy = z.infer<typeof referenceBriefTaxonomySchema>
+export type ReferenceTaxonomyUsageContext = z.infer<typeof referenceTaxonomyUsageContextSchema>
+export type ReferenceIntakeProductAnalysis = z.infer<typeof referenceIntakeProductAnalysisSchema>
+export type ReferenceIntake = z.infer<typeof referenceIntakeSchema>
+export type OfficialReferenceQueryPlan = z.infer<typeof officialReferenceQueryPlanSchema>
+export type OfficialReferenceQueryPlanItem = z.infer<typeof officialReferenceQueryPlanItemSchema>
 export type VideoJobResponse = z.infer<typeof videoJobResponseSchema>
 export type VideoVariantResponse = z.infer<typeof videoVariantResponseSchema>
 export type VideoJobDetailResponse = z.infer<typeof videoJobDetailResponseSchema>

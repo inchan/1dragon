@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import type { ReferenceBrief } from '@1dragon/shared'
+import { describe, expect, it } from 'vitest'
 import { normalizeReferenceBriefInput } from './reference-brief.js'
 
 describe('reference brief normalization', () => {
@@ -10,7 +10,10 @@ describe('reference brief normalization', () => {
 			priceBand: ' premium ',
 			coreBenefits: ['Waist definition', ' waist definition ', 'office-ready silhouette'],
 			differentiators: ['Seoul editorial mood', 'seoul editorial mood'],
-			proofPoints: ['customer reviews mention the wrap line', 'customer reviews mention the wrap line'],
+			proofPoints: [
+				'customer reviews mention the wrap line',
+				'customer reviews mention the wrap line',
+			],
 			targetAudience: {
 				summary: '  office-first women in their late 20s to 30s ',
 				useCases: ['commute', ' commute ', 'day-to-night'],
@@ -39,6 +42,11 @@ describe('reference brief normalization', () => {
 			]),
 		)
 		expect(normalized.queryHints.competitorQueries).toEqual(['TikTok fashion ads', 'office look'])
+		expect(normalized.taxonomy).toEqual({
+			category: 'FASHION',
+			source: 'brief',
+			usageContexts: ['COMMUTE'],
+		})
 		expect(normalized.missingSignals).toEqual([])
 		expect(normalized.completenessScore).toBe(100)
 		expect(normalized.landingPageSource).toBe('provided_text')
@@ -67,6 +75,11 @@ describe('reference brief normalization', () => {
 		})
 
 		expect(normalized.platformTargets).toEqual(['INSTAGRAM_REELS'])
+		expect(normalized.taxonomy).toEqual({
+			category: 'OTHER',
+			source: 'brief',
+			usageContexts: ['COMMUTE'],
+		})
 		expect(normalized.missingSignals).toEqual([
 			'price_band',
 			'proof_points',
@@ -110,6 +123,83 @@ describe('reference brief normalization', () => {
 		expect(normalized.landingPageDescription).toBe('Polished wrap silhouette for commute days.')
 		expect(normalized.landingPageExcerpt).toContain('Cloud Wrap Dress made for office mornings')
 		expect(normalized.missingSignals).not.toContain('landing_page_text')
+		expect(normalized.taxonomy).toEqual({
+			category: 'OTHER',
+			source: 'brief',
+			usageContexts: ['COMMUTE'],
+		})
+	})
+
+	it('merges product-analysis signals into taxonomy when present', () => {
+		const brief: ReferenceBrief = {
+			productName: 'Metro Sling Bag',
+			productCategoryHint: 'accessories',
+			coreBenefits: ['hands-free commute'],
+			targetAudience: {
+				summary: 'city commuters',
+				useCases: ['commute'],
+				painPoints: [],
+			},
+			landingPageText: 'A slim sling bag built for urban commutes and quick access essentials.',
+			differentiators: ['water-resistant finish'],
+			proofPoints: [],
+			competitorExamples: [],
+			categoryExamples: ['everyday carry'],
+			successMetrics: [],
+		}
+
+		const normalized = normalizeReferenceBriefInput({
+			brief,
+			fallbackPlatforms: ['TIKTOK'],
+			productAnalysis: {
+				id: '123e4567-e89b-12d3-a456-426614174000',
+				category: 'ACCESSORIES',
+				keywords: ['crossbody', 'minimal carry'],
+				targetAudience: 'minimalist commuters',
+			},
+		})
+
+		expect(normalized.productAnalysisId).toBe('123e4567-e89b-12d3-a456-426614174000')
+		expect(normalized.taxonomy).toEqual({
+			category: 'ACCESSORIES',
+			source: 'merged',
+			usageContexts: ['COMMUTE'],
+		})
+	})
+
+	it('uses product-analysis-only taxonomy when the brief has no stable category hint', () => {
+		const brief: ReferenceBrief = {
+			productName: 'Hydra Barrier Serum',
+			coreBenefits: ['fast hydration'],
+			targetAudience: {
+				summary: 'people rebuilding a nightly skincare routine',
+				useCases: ['night routine'],
+				painPoints: ['dry patches'],
+			},
+			landingPageText: 'Fast hydration serum for barrier care after cleansing.',
+			differentiators: [],
+			proofPoints: [],
+			competitorExamples: [],
+			categoryExamples: [],
+			successMetrics: [],
+		}
+
+		const normalized = normalizeReferenceBriefInput({
+			brief,
+			fallbackPlatforms: ['INSTAGRAM_REELS'],
+			productAnalysis: {
+				id: '0d7b2f7f-012f-4d2a-bdbf-b8e3000f1111',
+				category: 'BEAUTY',
+				keywords: ['skincare', 'serum'],
+				targetAudience: 'night skincare users',
+			},
+		})
+
+		expect(normalized.taxonomy).toEqual({
+			category: 'BEAUTY',
+			source: 'product_analysis',
+			usageContexts: ['BEAUTY_ROUTINE'],
+		})
 	})
 
 	it('bounds fetched landing-page metadata to schema-safe lengths', () => {

@@ -1,20 +1,27 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1771427935385,
-      "tag": "0000_special_sebastian_shaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1771429510184,
-      "tag": "0001_open_stepford_cuckoos",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1771427935385,
+			"tag": "0000_special_sebastian_shaw",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1771429510184,
+			"tag": "0001_open_stepford_cuckoos",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1773849000000,
+			"tag": "0002_reference_intake_on_video_jobs",
+			"breakpoints": true
+		}
+	]
 }

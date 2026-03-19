@@ -179,6 +179,27 @@ export const officialReferenceDiscoveryBundleSchema = z.object({
 	targets: z.array(officialReferenceDiscoveryTargetSchema).min(1).max(12),
 })
 
+export const officialReferenceProbeStatusSchema = z.enum([
+	'reachable',
+	'unreachable',
+	'manual',
+])
+
+export const officialReferenceProbeResultSchema = officialReferenceDiscoveryTargetSchema.extend({
+	status: officialReferenceProbeStatusSchema,
+	httpStatus: z.number().int().min(100).max(599).optional(),
+	contentType: z.string().trim().min(1).max(160).optional(),
+	resolvedUrl: z.string().url().optional(),
+	pageTitle: z.string().trim().min(1).max(160).optional(),
+	errorMessage: z.string().trim().min(1).max(200).optional(),
+})
+
+export const officialReferenceProbeBundleSchema = z.object({
+	jobId: z.string().uuid(),
+	taxonomy: referenceBriefTaxonomySchema,
+	results: z.array(officialReferenceProbeResultSchema).min(1).max(12),
+})
+
 // ── Request Schemas ──────────────────────────────────────────────────────────
 
 export const createVideoJobRequestSchema = z.object({
@@ -305,6 +326,8 @@ export type OfficialReferenceQueryPlan = z.infer<typeof officialReferenceQueryPl
 export type OfficialReferenceQueryPlanItem = z.infer<typeof officialReferenceQueryPlanItemSchema>
 export type OfficialReferenceDiscoveryTarget = z.infer<typeof officialReferenceDiscoveryTargetSchema>
 export type OfficialReferenceDiscoveryBundle = z.infer<typeof officialReferenceDiscoveryBundleSchema>
+export type OfficialReferenceProbeResult = z.infer<typeof officialReferenceProbeResultSchema>
+export type OfficialReferenceProbeBundle = z.infer<typeof officialReferenceProbeBundleSchema>
 export type VideoJobResponse = z.infer<typeof videoJobResponseSchema>
 export type VideoVariantResponse = z.infer<typeof videoVariantResponseSchema>
 export type VideoJobDetailResponse = z.infer<typeof videoJobDetailResponseSchema>

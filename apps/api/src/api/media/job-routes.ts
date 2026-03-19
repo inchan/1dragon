@@ -3,6 +3,7 @@ import { resolveLandingPageTruth } from '@/application/media/landing-page-truth.
 import { buildOfficialReferenceQueryPlan } from '@/application/media/reference-query-plan.js'
 import { normalizeReferenceBriefInput } from '@/application/media/reference-brief.js'
 import { buildOfficialReferenceDiscoveryBundle } from '@/application/media/reference-source-discovery.js'
+import { probeOfficialReferenceSources } from '@/application/media/reference-source-probe.js'
 import {
 	DailyPublishHealthService,
 	MediaReliabilityPolicyService,
@@ -478,6 +479,51 @@ export function createJobSubRouter(deps: {
 			data: buildOfficialReferenceDiscoveryBundle({
 				jobId: job.id,
 				normalizedBrief: job.referenceIntake.normalizedReferenceBrief,
+			}),
+		})
+	})
+
+	app.get('/jobs/:jobId/reference-sources/probe', async (c) => {
+		const user = c.get('user')
+		if (!user) {
+			return c.json(UNAUTHORIZED_RESPONSE, 401)
+		}
+
+		const jobId = c.req.param('jobId')
+		const job = await jobRepository.findById(jobId, user.id)
+		if (!job) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'JOB_NOT_FOUND',
+						message: 'Job not found',
+					},
+				},
+				404,
+			)
+		}
+
+		if (!job.referenceIntake?.normalizedReferenceBrief) {
+			return c.json(
+				{
+					success: false,
+					error: {
+						code: 'REFERENCE_SOURCES_NOT_READY',
+						message: 'Reference intake is required before official discovery targets can be built',
+					},
+				},
+				409,
+			)
+		}
+
+		return c.json({
+			success: true,
+			data: await probeOfficialReferenceSources({
+				bundle: buildOfficialReferenceDiscoveryBundle({
+					jobId: job.id,
+					normalizedBrief: job.referenceIntake.normalizedReferenceBrief,
+				}),
 			}),
 		})
 	})

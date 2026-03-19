@@ -12,9 +12,9 @@ See: `.planning/PROJECT.md` (updated 2026-03-18)
 Phase: 3 of 6 (Collect Reference Signals Safely)
 Plan: 0 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-19 - Extended Phase 3 with official-source discovery targets and a job-scoped `reference-sources` response derived from persisted intake.
+Last activity: 2026-03-19 - Added a live official-source probe layer that checks discovery-target reachability/title metadata through a job-scoped `reference-sources/probe` response.
 
-Progress: [██████░░░░] 50%
+Progress: [███████░░░] 55%
 
 ## Performance Metrics
 
@@ -47,7 +47,7 @@ Progress: [██████░░░░] 50%
 ### Pending Todos
 
 - Decide which active OpenSpec changes are paused, adapted, or archived under the new upstream contract.
-- Add the first live official-source collection adapters behind the new discovery-target contract.
+- Add the first content-yielding official-source collection adapters behind the new probe/discovery contract.
 - Decide whether reference-intake debug output should later split operator-facing evidence from internal diagnostics.
 
 ### Blockers/Concerns
